@@ -1,0 +1,9 @@
+{
+  "name": "@cys-repuestos/schemas",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "type": "module",
+  "dependencies": {
+    "zod": "^4.0.0"
+  }
+}
