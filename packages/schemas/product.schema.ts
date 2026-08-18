@@ -28,14 +28,31 @@ export const productBaseSchema = z.object({
     .number()
     .positive('El precio debe ser mayor a $0'),
 
+  shortDescription: z
+    .string()
+    .trim()
+    .min(1, 'La descripción corta es obligatoria')
+    .max(
+      120,
+      'La descripción corta no puede superar los 120 caracteres',
+    ),
+
   description: z
     .string()
     .trim()
     .min(1, 'La descripción es obligatoria')
-    .max(300, 'La descripción no puede superar los 300 caracteres'),
+    .max(
+      1500,
+      'La descripción no puede superar los 1500 caracteres',
+    ),
 })
 
+
+// Crear producto
 export const createProductSchema = productBaseSchema
+
+
+// Editar producto
 export const editProductSchema = productBaseSchema.extend({
   stock: z.coerce
     .number()
@@ -44,6 +61,7 @@ export const editProductSchema = productBaseSchema.extend({
 })
 
 
+// Tipos de TypeScript generados automáticamente desde Zod
 export type CreateProductInput =
   z.infer<typeof createProductSchema>
 

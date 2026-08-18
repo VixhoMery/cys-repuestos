@@ -1,14 +1,18 @@
 type ProductCardProps = {
   name: string
+  brand: string
   price: number
   stock: number
+  shortDescription: string
   image?: string
 }
 
 function ProductCard({
   name,
+  brand,
   price,
   stock,
+  shortDescription,
   image,
 }: ProductCardProps) {
   return (
@@ -21,14 +25,18 @@ function ProductCard({
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-slate-400">
+          <div className="flex h-full items-center justify-center text-sm text-slate-400">
             Sin imagen
           </div>
         )}
       </div>
 
       <div className="p-4">
-        <h2 className="font-semibold text-slate-800">
+        <p className="text-sm font-semibold text-slate-500">
+          {brand}
+        </p>
+
+        <h2 className="mt-1 font-semibold text-slate-900">
           {name}
         </h2>
 
@@ -36,19 +44,13 @@ function ProductCard({
           ${price.toLocaleString('es-CL')}
         </p>
 
-        <p className="mt-1 text-sm text-slate-500">
-          Stock: {stock}
+        <p className="mt-2 text-sm text-slate-500">
+          {shortDescription}
         </p>
 
-        <div className="mt-4 flex gap-2">
-          <button className="flex-1 rounded-lg bg-slate-900 px-3 py-2 text-sm text-white">
-            Editar
-          </button>
-
-          <button className="flex-1 rounded-lg border border-red-200 px-3 py-2 text-sm text-red-600">
-            Eliminar
-          </button>
-        </div>
+        <p className="mt-3 text-sm font-medium text-slate-700">
+          Stock: {stock}
+        </p>
       </div>
     </article>
   )
