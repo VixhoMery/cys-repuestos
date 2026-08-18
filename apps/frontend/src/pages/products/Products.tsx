@@ -165,13 +165,13 @@ function Products() {
                 }
               >
                 <ProductCard
+                  key={product.id}
+                  id={product.id}
                   name={product.name}
                   brand={product.brand}
                   price={product.price}
                   stock={product.stock}
-                  shortDescription={
-                    product.shortDescription
-                  }
+                  shortDescription={product.shortDescription}
                 />
               </div>
             ))}

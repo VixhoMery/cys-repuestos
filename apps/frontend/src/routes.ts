@@ -3,6 +3,8 @@ import POS from './pages/POS'
 import Sales from './pages/Sales'
 import Statistics from './pages/Statistics'
 import ProductDetail from './pages/products/ProductDetail'
+import NewProduct from './pages/products/NewProduct'
+import EditProduct from './pages/products/EditProduct'
 
 interface RouteConfig {
   path: string
@@ -35,6 +37,16 @@ export const routes: RouteConfig[] = [
   {
     path: '/productos/:id',
     component: ProductDetail,
+    private: true,
+  },
+  {
+    path: '/productos/nuevo',
+    component: NewProduct,
+    private: true,
+  },
+  {
+    path: '/productos/:id/editar',
+    component: EditProduct,
     private: true,
   },
 ]

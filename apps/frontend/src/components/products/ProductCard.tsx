@@ -1,6 +1,9 @@
-import { MoreVertical } from 'lucide-react'
+import { useState } from 'react'
+import { MoreVertical, Pencil } from 'lucide-react'
+import { useNavigate } from 'react-router'
 
 type ProductCardProps = {
+  id: number
   name: string
   brand: string
   price: number
@@ -10,6 +13,7 @@ type ProductCardProps = {
 }
 
 function ProductCard({
+  id,
   name,
   brand,
   price,
@@ -17,11 +21,15 @@ function ProductCard({
   shortDescription,
   image,
 }: ProductCardProps) {
+  const navigate = useNavigate()
+  const [menuOpen, setMenuOpen] = useState(false)
+
   return (
     <article
+      onClick={() => navigate(`/productos/${id}`)}
       className="
-        group cursor-pointer
-        overflow-hidden rounded-xl
+        group relative cursor-pointer
+        overflow-visible rounded-xl
         border border-slate-200
         bg-white
         transition
@@ -30,16 +38,12 @@ function ProductCard({
       "
     >
       {/* Imagen */}
-      <div className="aspect-square overflow-hidden bg-slate-100">
+      <div className="aspect-square overflow-hidden rounded-t-xl bg-slate-100">
         {image ? (
           <img
             src={image}
             alt={name}
-            className="
-              h-full w-full object-cover
-              transition duration-300
-              group-hover:scale-105
-            "
+            className="h-full w-full object-cover"
           />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-slate-400">
@@ -48,8 +52,7 @@ function ProductCard({
         )}
       </div>
 
-      {/* Información */}
-      <div className="p-4">
+      <div className="relative p-4">
         <div className="flex items-start justify-between gap-2">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
@@ -61,15 +64,48 @@ function ProductCard({
             </h3>
           </div>
 
-          <button
-            type="button"
-            className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-            onClick={(event) => {
-              event.stopPropagation()
-            }}
-          >
-            <MoreVertical size={18} />
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                setMenuOpen((open) => !open)
+              }}
+              className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+              aria-label="Opciones del producto"
+            >
+              <MoreVertical size={19} />
+            </button>
+
+            {menuOpen && (
+              <div
+                onClick={(event) => event.stopPropagation()}
+                className="
+                  absolute right-0 top-9 z-20
+                  w-44 overflow-hidden
+                  rounded-lg border border-slate-200
+                  bg-white shadow-lg
+                "
+              >
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate(`/productos/${id}/editar`)
+                  }
+                  className="
+                    flex w-full items-center gap-2
+                    px-4 py-3 text-left
+                    text-sm text-slate-700
+                    transition hover:bg-slate-100
+                  "
+                >
+                  <Pencil size={16} />
+
+                  Editar producto
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         <p className="mt-3 text-xl font-bold text-slate-900">

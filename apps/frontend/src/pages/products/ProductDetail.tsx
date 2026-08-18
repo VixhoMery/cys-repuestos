@@ -44,7 +44,7 @@ function ProductDetail() {
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="grid lg:grid-cols-2">
           {/* Imagen */}
-          <div className="flex min-h-[450px] items-center justify-center bg-slate-100">
+          <div className="flex min-h items-center justify-center bg-slate-100">
             {product.image ? (
               <img
                 src={product.image}
