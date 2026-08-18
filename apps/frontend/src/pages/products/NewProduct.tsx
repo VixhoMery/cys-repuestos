@@ -5,8 +5,9 @@ import type { CreateProductInput } from '@cys-repuestos/schemas'
 function NewProduct() {
   const navigate = useNavigate()
 
-  const handleCreateProduct = (data: CreateProductInput) => {
-    console.log('Producto nuevo:', data)
+  const handleCreateProduct = (data: CreateProductInput, images: File[],) => {
+  console.log('Producto:', data)
+  console.log('Fotografías:', images)
 
     // Más adelante:
     // await productsApi.create(data)
