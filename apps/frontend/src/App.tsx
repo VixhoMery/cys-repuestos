@@ -1,125 +1,25 @@
-import ProductCard from './components/ProductCard'
+import { Navigate, Route, Routes } from 'react-router'
+import { routes } from './routes'
+import Layout from './components/layout/Layout'
 
 function App() {
   return (
-    <main className="min-h-screen bg-slate-100 p-8">
-      <div className="grid grid-cols-8 gap-6 sm:grid-cols-4 lg:grid-cols-3 xl:grid-cols-7">
-        <ProductCard
-          name="Alternador Toyota"
-          brand="Toyota"
-          shortDescription="Pequeña descripción para el producto"
-          price={54990}
-          stock={4}
-        />
+    <Routes>
+      <Route element={<Layout />}>
+        {routes.map((route) => (
+          <Route
+            key={route.path}
+            path={route.path}
+            element={<route.component />}
+          />
+        ))}
+      </Route>
 
-        <ProductCard
-          name="Alternador Toyota"
-          brand="Toyota"
-          shortDescription="Pequeña descripción para el producto"
-          price={54990}
-          stock={4}
-        />
-
-        <ProductCard
-          name="Alternador Toyota"
-          brand="Toyota"
-          shortDescription="Pequeña descripción para el producto"
-          price={54990}
-          stock={4}
-        />
-
-        <ProductCard
-          name="Alternador Toyota"
-          brand="Toyota"
-          shortDescription="Pequeña descripción para el producto"
-          price={54990}
-          stock={4}
-        />
-
-        <ProductCard
-          name="Alternador Toyota"
-          brand="Toyota"
-          shortDescription="Pequeña descripción para el producto"
-          price={54990}
-          stock={4}
-        />
-
-        <ProductCard
-          name="Alternador Toyota"
-          brand="Toyota"
-          shortDescription="Pequeña descripción para el producto"
-          price={54990}
-          stock={4}
-        />
-
-        <ProductCard
-          name="Alternador Toyota"
-          brand="Toyota"
-          shortDescription="Pequeña descripción para el producto"
-          price={54990}
-          stock={4}
-        />
-
-        <ProductCard
-          name="Alternador Toyota"
-          brand="Toyota"
-          shortDescription="Pequeña descripción para el producto"
-          price={54990}
-          stock={4}
-        />
-
-        <ProductCard
-          name="Alternador Toyota"
-          brand="Toyota"
-          shortDescription="Pequeña descripción para el producto"
-          price={54990}
-          stock={4}
-        />
-
-        <ProductCard
-          name="Alternador Toyota"
-          brand="Toyota"
-          shortDescription="Pequeña descripción para el producto"
-          price={54990}
-          stock={4}
-        />
-
-        <ProductCard
-          name="Alternador Toyota"
-          brand="Toyota"
-          shortDescription="Pequeña descripción para el producto"
-          price={54990}
-          stock={4}
-        />
-
-        <ProductCard
-          name="Alternador Toyota"
-          brand="Toyota"
-          shortDescription="Pequeña descripción para el producto"
-          price={54990}
-          stock={4}
-        />
-
-        <ProductCard
-          name="Alternador Toyota"
-          brand="Toyota"
-          shortDescription="Pequeña descripción para el producto"
-          price={54990}
-          stock={4}
-        />
-
-        <ProductCard
-          name="Alternador Toyota"
-          brand="Toyota"
-          shortDescription="Pequeña descripción para el producto"
-          price={54990}
-          stock={4}
-        />
-
-
-
-      </div>
-    </main>
+      <Route
+        path="/"
+        element={<Navigate to="/productos" replace />}
+      />
+    </Routes>
   )
 }
 

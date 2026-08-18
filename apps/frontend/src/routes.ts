@@ -1,0 +1,41 @@
+import Products from './pages/products/Products'
+import POS from './pages/POS'
+import Sales from './pages/Sales'
+import Statistics from './pages/Statistics'
+import ProductDetail from './pages/products/ProductDetail'
+
+interface RouteConfig {
+  path: string
+  component: React.ComponentType
+  private?: boolean
+}
+
+export const routes: RouteConfig[] = [
+  {
+    path: '/productos',
+    component: Products,
+    private: true,
+  },
+  {
+    path: '/pos',
+    component: POS,
+    private: true,
+  },
+  {
+    path: '/ventas',
+    component: Sales,
+    private: true,
+  },
+  {
+    path: '/estadisticas',
+    component: Statistics,
+    private: true,
+  },
+
+  {
+    path: '/productos/:id',
+    component: ProductDetail,
+    private: true,
+  },
+]
+
