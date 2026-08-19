@@ -12,6 +12,7 @@
   "dependencies": {
     "@cys-repuestos/schemas": "workspace:*",
     "@hookform/resolvers": "^5.9.0",
+    "@supabase/supabase-js": "^2.112.3",
     "@tailwindcss/vite": "^4.3.3",
     "axios": "^1.19.0",
     "lucide-react": "^1.31.0",

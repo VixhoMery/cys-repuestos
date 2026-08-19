@@ -5,11 +5,14 @@ import Statistics from './pages/Statistics'
 import ProductDetail from './pages/products/ProductDetail'
 import NewProduct from './pages/products/NewProduct'
 import EditProduct from './pages/products/EditProduct'
+import Login from './pages/auth/Login'
 
 interface RouteConfig {
   path: string
   component: React.ComponentType
   private?: boolean
+  restricted?: boolean
+  adminOnly?: boolean
 }
 
 export const routes: RouteConfig[] = [
@@ -48,6 +51,13 @@ export const routes: RouteConfig[] = [
     path: '/productos/:id/editar',
     component: EditProduct,
     private: true,
+  },
+
+  {
+    path: '/login',
+    component: Login,
+    private: false,
+    restricted: true,
   },
 ]
 

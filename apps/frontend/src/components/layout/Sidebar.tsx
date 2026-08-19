@@ -1,5 +1,8 @@
-import { useState } from 'react'
-import { NavLink } from 'react-router'
+import { useState } from "react";
+import { NavLink } from "react-router";
+import { useNavigate } from "react-router";
+import { useAuth } from "../../context/AuthContext";
+
 import {
   Package,
   ShoppingCart,
@@ -8,10 +11,18 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-} from 'lucide-react'
+} from "lucide-react";
 
 function Sidebar() {
-  const [isOpen, setIsOpen] = useState(true)
+  const [isOpen, setIsOpen] = useState(true);
+
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
+  };
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `
@@ -19,51 +30,51 @@ function Sidebar() {
       transition-colors duration-200
       ${
         isActive
-          ? 'bg-blue-600 text-white'
-          : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+          ? "bg-blue-600 text-white"
+          : "text-slate-300 hover:bg-slate-800 hover:text-white"
       }
-    `
+    `;
 
   return (
     <aside
-    className={`
+      className={`
         sticky top-0
         flex h-screen self-start flex-col
         bg-slate-900 text-white
         transition-all duration-300
-        ${isOpen ? 'w-64' : 'w-20'}
+        ${isOpen ? "w-64" : "w-20"}
     `}
     >
       {/* Encabezado */}
       <div
         className={`
           flex items-center border-b border-slate-700 p-4
-          ${isOpen ? 'justify-between' : 'justify-center'}
+          ${isOpen ? "justify-between" : "justify-center"}
         `}
       >
         {isOpen && (
           <div>
-            <h1 className="text-xl font-bold">
-              C&S Repuestos
-            </h1>
+            <h1 className="text-xl font-bold">C&S Repuestos</h1>
 
-            <p className="text-sm text-slate-400">
-              Sistema de gestión
-            </p>
+            <p className="text-sm text-slate-400">Sistema de gestión</p>
           </div>
         )}
 
         <button
           type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className="rounded-lg p-2 text-slate-300 transition hover:bg-slate-800 hover:text-white"
-          aria-label={isOpen ? 'Contraer menú' : 'Expandir menú'}
-        >
-          {isOpen ? (
-            <ChevronLeft size={22} />
-          ) : (
-            <ChevronRight size={22} />
-          )}
+          onClick={handleLogout}
+          className="
+            flex w-full items-center gap-3
+            rounded-lg px-4 py-3
+            text-slate-300
+            transition
+            hover:bg-slate-800
+            hover:text-white
+          ">
+            
+          <LogOut size={22} />
+
+          {isOpen && <span>Cerrar sesión</span>}
         </button>
       </div>
 
@@ -72,57 +83,41 @@ function Sidebar() {
         <NavLink
           to="/productos"
           className={linkClass}
-          title={!isOpen ? 'Productos' : undefined}
+          title={!isOpen ? "Productos" : undefined}
         >
           <Package size={22} />
 
-          {isOpen && (
-            <span>
-              Productos
-            </span>
-          )}
+          {isOpen && <span>Productos</span>}
         </NavLink>
 
         <NavLink
           to="/pos"
           className={linkClass}
-          title={!isOpen ? 'Punto de Venta' : undefined}
+          title={!isOpen ? "Punto de Venta" : undefined}
         >
           <ShoppingCart size={22} />
 
-          {isOpen && (
-            <span>
-              Punto de Venta
-            </span>
-          )}
+          {isOpen && <span>Punto de Venta</span>}
         </NavLink>
 
         <NavLink
           to="/ventas"
           className={linkClass}
-          title={!isOpen ? 'Ventas' : undefined}
+          title={!isOpen ? "Ventas" : undefined}
         >
           <ReceiptText size={22} />
 
-          {isOpen && (
-            <span>
-              Ventas
-            </span>
-          )}
+          {isOpen && <span>Ventas</span>}
         </NavLink>
 
         <NavLink
           to="/estadisticas"
           className={linkClass}
-          title={!isOpen ? 'Estadísticas' : undefined}
+          title={!isOpen ? "Estadísticas" : undefined}
         >
           <ChartNoAxesCombined size={22} />
 
-          {isOpen && (
-            <span>
-              Estadísticas
-            </span>
-          )}
+          {isOpen && <span>Estadísticas</span>}
         </NavLink>
       </nav>
 
@@ -137,19 +132,15 @@ function Sidebar() {
             transition-colors duration-200
             hover:bg-slate-800 hover:text-white
           "
-          title={!isOpen ? 'Cerrar sesión' : undefined}
+          title={!isOpen ? "Cerrar sesión" : undefined}
         >
           <LogOut size={22} />
 
-          {isOpen && (
-            <span>
-              Cerrar sesión
-            </span>
-          )}
+          {isOpen && <span>Cerrar sesión</span>}
         </button>
       </div>
     </aside>
-  )
+  );
 }
 
-export default Sidebar
+export default Sidebar;
