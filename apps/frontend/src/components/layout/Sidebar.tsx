@@ -1,7 +1,5 @@
-import { useState } from "react";
-import { NavLink } from "react-router";
-import { useNavigate } from "react-router";
-import { useAuth } from "../../context/AuthContext";
+import { useState } from 'react'
+import { NavLink, useNavigate } from 'react-router'
 
 import {
   Package,
@@ -11,136 +9,173 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-} from "lucide-react";
+} from 'lucide-react'
+
+import { useAuth } from '../../context/AuthContext'
 
 function Sidebar() {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(true)
 
-  const { logout } = useAuth();
-  const navigate = useNavigate();
+  const { logout } = useAuth()
+  const navigate = useNavigate()
 
   const handleLogout = async () => {
-    await logout();
-    navigate("/login");
-  };
+    await logout()
+    navigate('/login')
+  }
 
-  const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `
-      flex items-center gap-3 rounded-lg px-4 py-3
-      transition-colors duration-200
-      ${
-        isActive
-          ? "bg-blue-600 text-white"
-          : "text-slate-300 hover:bg-slate-800 hover:text-white"
-      }
-    `;
+  const navItems = [
+    {
+      to: '/productos',
+      label: 'Productos',
+      icon: Package,
+    },
+    {
+      to: '/pos',
+      label: 'Punto de Venta',
+      icon: ShoppingCart,
+    },
+    {
+      to: '/ventas',
+      label: 'Ventas',
+      icon: ReceiptText,
+    },
+    {
+      to: '/estadisticas',
+      label: 'Estadísticas',
+      icon: ChartNoAxesCombined,
+    },
+  ]
 
   return (
     <aside
       className={`
         sticky top-0
         flex h-screen self-start flex-col
+        overflow-y-auto
         bg-slate-900 text-white
         transition-all duration-300
-        ${isOpen ? "w-64" : "w-20"}
-    `}
+        ${isOpen ? 'w-64' : 'w-20'}
+      `}
     >
       {/* Encabezado */}
       <div
         className={`
-          flex items-center border-b border-slate-700 p-4
-          ${isOpen ? "justify-between" : "justify-center"}
+          flex items-center
+          border-b border-slate-700
+          p-4
+          ${isOpen ? 'justify-between' : 'justify-center'}
         `}
       >
         {isOpen && (
           <div>
-            <h1 className="text-xl font-bold">C&S Repuestos</h1>
+            <h1 className="text-xl font-bold">
+              C&S Repuestos
+            </h1>
 
-            <p className="text-sm text-slate-400">Sistema de gestión</p>
+            <p className="mt-1 text-sm text-slate-400">
+              Sistema de gestión
+            </p>
           </div>
         )}
 
+        {/* Este botón SOLO abre/cierra el sidebar */}
         <button
           type="button"
-          onClick={handleLogout}
+          onClick={() => setIsOpen((current) => !current)}
           className="
-            flex w-full items-center gap-3
-            rounded-lg px-4 py-3
+            rounded-lg p-2
             text-slate-300
             transition
             hover:bg-slate-800
             hover:text-white
-          ">
-            
-          <LogOut size={22} />
-
-          {isOpen && <span>Cerrar sesión</span>}
+          "
+          aria-label={
+            isOpen
+              ? 'Contraer menú'
+              : 'Expandir menú'
+          }
+        >
+          {isOpen ? (
+            <ChevronLeft size={22} />
+          ) : (
+            <ChevronRight size={22} />
+          )}
         </button>
       </div>
 
       {/* Navegación */}
       <nav className="flex flex-1 flex-col gap-2 p-4">
-        <NavLink
-          to="/productos"
-          className={linkClass}
-          title={!isOpen ? "Productos" : undefined}
-        >
-          <Package size={22} />
+        {navItems.map((item) => {
+          const Icon = item.icon
 
-          {isOpen && <span>Productos</span>}
-        </NavLink>
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              title={!isOpen ? item.label : undefined}
+              className={({ isActive }) =>
+                `
+                  flex items-center gap-3
+                  rounded-lg px-4 py-3
+                  transition-colors duration-200
 
-        <NavLink
-          to="/pos"
-          className={linkClass}
-          title={!isOpen ? "Punto de Venta" : undefined}
-        >
-          <ShoppingCart size={22} />
+                  ${
+                    isActive
+                      ? 'bg-blue-600 text-white'
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                  }
 
-          {isOpen && <span>Punto de Venta</span>}
-        </NavLink>
+                  ${!isOpen ? 'justify-center' : ''}
+                `
+              }
+            >
+              <Icon
+                size={22}
+                className="shrink-0"
+              />
 
-        <NavLink
-          to="/ventas"
-          className={linkClass}
-          title={!isOpen ? "Ventas" : undefined}
-        >
-          <ReceiptText size={22} />
-
-          {isOpen && <span>Ventas</span>}
-        </NavLink>
-
-        <NavLink
-          to="/estadisticas"
-          className={linkClass}
-          title={!isOpen ? "Estadísticas" : undefined}
-        >
-          <ChartNoAxesCombined size={22} />
-
-          {isOpen && <span>Estadísticas</span>}
-        </NavLink>
+              {isOpen && (
+                <span className="whitespace-nowrap">
+                  {item.label}
+                </span>
+              )}
+            </NavLink>
+          )
+        })}
       </nav>
 
-      {/* Cerrar sesión */}
+      {/* Logout */}
       <div className="border-t border-slate-700 p-4">
         <button
           type="button"
-          className="
+          onClick={handleLogout}
+          title={!isOpen ? 'Cerrar sesión' : undefined}
+          className={`
             flex w-full items-center gap-3
             rounded-lg px-4 py-3
             text-slate-300
             transition-colors duration-200
-            hover:bg-slate-800 hover:text-white
-          "
-          title={!isOpen ? "Cerrar sesión" : undefined}
-        >
-          <LogOut size={22} />
+            hover:bg-red-500/10
+            hover:text-red-400
 
-          {isOpen && <span>Cerrar sesión</span>}
+            ${!isOpen ? 'justify-center' : ''}
+          `}
+        >
+          <LogOut
+            size={22}
+            className="shrink-0"
+          />
+
+          {isOpen && (
+            <span className="whitespace-nowrap">
+              Cerrar sesión
+            </span>
+          )}
         </button>
       </div>
     </aside>
-  );
+  )
 }
 
-export default Sidebar;
+export default Sidebar
