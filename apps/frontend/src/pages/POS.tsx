@@ -1,113 +1,143 @@
-import { useState } from "react";
-import { Search } from "lucide-react";
+import { useState } from 'react'
+import {
+  AlertTriangle,
+  Search,
+  X,
+} from 'lucide-react'
 
-import PosProductCard from "../components/pos/PosProductCard";
-import Cart from "../components/pos/Cart";
+import PosProductCard from '../components/pos/PosProductCard'
+import Cart from '../components/pos/Cart'
+
 
 // ------------------------------------
-// Productos mock
+// Productos temporales
 // Después vendrán desde el backend
 // ------------------------------------
 
 const products = [
   {
     id: 1,
-    name: "Alternador Toyota Yaris",
-    brand: "Bosch",
+    name: 'Alternador Toyota Yaris',
+    brand: 'Bosch',
     price: 180000,
     stock: 4,
   },
   {
     id: 2,
-    name: "Pastillas de freno",
-    brand: "Brembo",
+    name: 'Pastillas de freno',
+    brand: 'Brembo',
     price: 45990,
     stock: 12,
   },
   {
     id: 3,
-    name: "Filtro de aceite",
-    brand: "Mann Filter",
+    name: 'Filtro de aceite',
+    brand: 'Mann Filter',
     price: 8990,
     stock: 2,
   },
   {
     id: 4,
-    name: "Neumático 195/65 R15",
-    brand: "Michelin",
+    name: 'Neumático 195/65 R15',
+    brand: 'Michelin',
     price: 74990,
     stock: 8,
   },
-];
+]
+
 
 // ------------------------------------
-// Tipo de producto dentro de la venta
+// Producto agregado a la venta
 // ------------------------------------
 
 type CartItem = {
-  id: number;
-  name: string;
-  price: number;
-  quantity: number;
-  stock: number;
-};
+  id: number
+  name: string
+  price: number
+  quantity: number
+  stock: number
+}
 
-// ------------------------------------
-// Componente POS
-// ------------------------------------
 
 function POS() {
-  const [search, setSearch] = useState("");
+  // ------------------------------------
+  // Estados
+  // ------------------------------------
 
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [search, setSearch] =
+    useState('')
+
+  const [cart, setCart] =
+    useState<CartItem[]>([])
+
+  const [
+    showCancelModal,
+    setShowCancelModal,
+  ] = useState(false)
+
 
   // ------------------------------------
   // Buscar productos
   // ------------------------------------
 
-  const filteredProducts = products.filter((product) => {
-    const query = search.toLowerCase();
+  const filteredProducts =
+    products.filter((product) => {
+      const query =
+        search.toLowerCase()
 
-    return (
-      product.name.toLowerCase().includes(query) ||
-      product.brand.toLowerCase().includes(query)
-    );
-  });
+      return (
+        product.name
+          .toLowerCase()
+          .includes(query) ||
+        product.brand
+          .toLowerCase()
+          .includes(query)
+      )
+    })
+
 
   // ------------------------------------
-  // Agregar producto a la venta
+  // Agregar producto
   // ------------------------------------
 
   const addProduct = (id: number) => {
-    const product = products.find((product) => product.id === id);
+    const product =
+      products.find(
+        (product) => product.id === id,
+      )
 
     if (!product || product.stock === 0) {
-      return;
+      return
     }
 
     setCart((currentCart) => {
-      const existing = currentCart.find((item) => item.id === id);
+      const existing =
+        currentCart.find(
+          (item) => item.id === id,
+        )
 
-      // Si ya está en el carrito,
-      // aumenta la cantidad
+      // Ya está agregado
       if (existing) {
-        // No permitir superar el stock
-        if (existing.quantity >= existing.stock) {
-          return currentCart;
+        // No superar stock disponible
+        if (
+          existing.quantity >=
+          existing.stock
+        ) {
+          return currentCart
         }
 
         return currentCart.map((item) =>
           item.id === id
             ? {
                 ...item,
-                quantity: item.quantity + 1,
+                quantity:
+                  item.quantity + 1,
               }
             : item,
-        );
+        )
       }
 
-      // Si todavía no existe,
-      // lo agrega con cantidad 1
+      // Producto nuevo en la venta
       return [
         ...currentCart,
         {
@@ -117,80 +147,125 @@ function POS() {
           stock: product.stock,
           quantity: 1,
         },
-      ];
-    });
-  };
+      ]
+    })
+  }
+
 
   // ------------------------------------
   // Aumentar cantidad
   // ------------------------------------
 
-  const increaseQuantity = (id: number) => {
+  const increaseQuantity = (
+    id: number,
+  ) => {
     setCart((currentCart) =>
       currentCart.map((item) =>
-        item.id === id && item.quantity < item.stock
+        item.id === id &&
+        item.quantity < item.stock
           ? {
               ...item,
-              quantity: item.quantity + 1,
+              quantity:
+                item.quantity + 1,
             }
           : item,
       ),
-    );
-  };
+    )
+  }
+
 
   // ------------------------------------
   // Disminuir cantidad
   // ------------------------------------
 
-  const decreaseQuantity = (id: number) => {
+  const decreaseQuantity = (
+    id: number,
+  ) => {
     setCart((currentCart) =>
       currentCart
         .map((item) =>
           item.id === id
             ? {
                 ...item,
-                quantity: item.quantity - 1,
+                quantity:
+                  item.quantity - 1,
               }
             : item,
         )
-        .filter((item) => item.quantity > 0),
-    );
-  };
+        .filter(
+          (item) =>
+            item.quantity > 0,
+        ),
+    )
+  }
+
 
   // ------------------------------------
-  // Eliminar producto de la venta
+  // Eliminar producto
   // ------------------------------------
 
-  const removeProduct = (id: number) => {
-    setCart((currentCart) => currentCart.filter((item) => item.id !== id));
-  };
+  const removeProduct = (
+    id: number,
+  ) => {
+    setCart((currentCart) =>
+      currentCart.filter(
+        (item) => item.id !== id,
+      ),
+    )
+  }
+
 
   // ------------------------------------
-  // Cancelar venta completa
+  // Solicitar cancelar venta
   // ------------------------------------
 
-  const cancelSale = () => {
-    setCart([]);
-  };
+  const requestCancelSale = () => {
+    if (cart.length === 0) {
+      return
+    }
+
+    setShowCancelModal(true)
+  }
+
 
   // ------------------------------------
-  // Render
+  // Cerrar modal
   // ------------------------------------
+
+  const closeCancelModal = () => {
+    setShowCancelModal(false)
+  }
+
+
+  // ------------------------------------
+  // Confirmar cancelación
+  // ------------------------------------
+
+  const confirmCancelSale = () => {
+    setCart([])
+    setShowCancelModal(false)
+  }
+
 
   return (
     <section>
       {/* Encabezado */}
       <header className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">Punto de Venta</h1>
+        <h1 className="text-3xl font-bold text-slate-900">
+          Punto de Venta
+        </h1>
 
         <p className="mt-1 text-slate-500">
-          Selecciona los productos para registrar una nueva venta.
+          Selecciona los productos para registrar
+          una nueva venta.
         </p>
       </header>
 
+
       {/* Contenido principal */}
       <div className="grid gap-8 xl:grid-cols-[1fr_380px]">
-        {/* Productos */}
+
+        {/* Catálogo */}
         <div>
           {/* Buscador */}
           <div className="relative mb-6 max-w-xl">
@@ -206,7 +281,11 @@ function POS() {
             <input
               type="search"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) =>
+                setSearch(
+                  event.target.value,
+                )
+              }
               placeholder="Buscar producto..."
               className="
                 w-full rounded-xl
@@ -221,7 +300,8 @@ function POS() {
             />
           </div>
 
-          {/* Grid de productos */}
+
+          {/* Productos */}
           <div
             className="
               grid grid-cols-1
@@ -231,24 +311,38 @@ function POS() {
             "
           >
             {filteredProducts.length > 0 ? (
-              filteredProducts.map((product) => (
-                <PosProductCard
-                  key={product.id}
-                  id={product.id}
-                  name={product.name}
-                  brand={product.brand}
-                  price={product.price}
-                  stock={product.stock}
-                  onAdd={addProduct}
-                />
-              ))
+              filteredProducts.map(
+                (product) => (
+                  <PosProductCard
+                    key={product.id}
+                    id={product.id}
+                    name={product.name}
+                    brand={product.brand}
+                    price={product.price}
+                    stock={product.stock}
+                    onAdd={addProduct}
+                  />
+                ),
+              )
             ) : (
-              <div className="col-span-full rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
+              <div
+                className="
+                  col-span-full
+                  rounded-xl
+                  border border-dashed
+                  border-slate-300
+                  bg-white
+                  p-10
+                  text-center
+                  text-slate-500
+                "
+              >
                 No se encontraron productos.
               </div>
             )}
           </div>
         </div>
+
 
         {/* Venta actual */}
         <Cart
@@ -256,11 +350,138 @@ function POS() {
           onIncrease={increaseQuantity}
           onDecrease={decreaseQuantity}
           onRemove={removeProduct}
-          onCancel={cancelSale}
+          onCancel={requestCancelSale}
         />
       </div>
+
+
+      {/* --------------------------------
+          MODAL CANCELAR VENTA
+      -------------------------------- */}
+
+      {showCancelModal && (
+        <div
+          className="
+            fixed inset-0 z-50
+            flex items-center justify-center
+            bg-slate-950/50
+            p-4
+          "
+        >
+          <div
+            className="
+              w-full max-w-md
+              rounded-2xl
+              bg-white
+              p-6
+              shadow-xl
+            "
+          >
+            {/* Cabecera */}
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div
+                  className="
+                    flex h-11 w-11
+                    shrink-0
+                    items-center justify-center
+                    rounded-full
+                    bg-red-100
+                    text-red-600
+                  "
+                >
+                  <AlertTriangle size={22} />
+                </div>
+
+                <div>
+                  <h2 className="text-xl font-semibold text-slate-900">
+                    ¿Cancelar venta?
+                  </h2>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    Se eliminará la venta actual.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeCancelModal}
+                className="
+                  rounded-lg
+                  p-2
+                  text-slate-400
+                  transition
+                  hover:bg-slate-100
+                  hover:text-slate-600
+                "
+                aria-label="Cerrar"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+
+            {/* Advertencia */}
+            <div
+              className="
+                mt-6
+                rounded-xl
+                border border-red-100
+                bg-red-50
+                p-4
+              "
+            >
+              <p className="text-sm text-red-700">
+                Se eliminarán todos los productos
+                seleccionados. Esta acción no
+                registrará ninguna venta.
+              </p>
+            </div>
+
+
+            {/* Botones */}
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={closeCancelModal}
+                className="
+                  flex-1
+                  rounded-xl
+                  border border-slate-300
+                  bg-white
+                  px-4 py-3
+                  font-medium
+                  text-slate-700
+                  transition
+                  hover:bg-slate-50
+                "
+              >
+                Volver
+              </button>
+
+              <button
+                type="button"
+                onClick={confirmCancelSale}
+                className="
+                  flex-1
+                  rounded-xl
+                  bg-red-600
+                  px-4 py-3
+                  font-medium
+                  text-white
+                  transition
+                  hover:bg-red-700
+                "
+              >
+                Sí, cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
-  );
+  )
 }
 
-export default POS;
+export default POS
