@@ -16,6 +16,7 @@ type CartProps = {
   onIncrease: (id: number) => void;
   onDecrease: (id: number) => void;
   onRemove: (id: number) => void;
+  onFinish: () => void;
   onCancel: () => void;
 };
 
@@ -24,6 +25,7 @@ function Cart({
   onIncrease,
   onDecrease,
   onRemove,
+  onFinish,
   onCancel,
 }: CartProps) {
   const total = items.reduce(
@@ -89,17 +91,18 @@ function Cart({
 
         <button
           type="button"
+          onClick={onFinish}
           disabled={items.length === 0}
           className="
-      w-full rounded-xl
-      bg-blue-600
-      px-5 py-3
-      font-medium text-white
-      transition
-      hover:bg-blue-700
-      disabled:cursor-not-allowed
-      disabled:bg-slate-300
-    "
+    w-full rounded-xl
+    bg-blue-600
+    px-5 py-3
+    font-medium text-white
+    transition
+    hover:bg-blue-700
+    disabled:cursor-not-allowed
+    disabled:bg-slate-300
+  "
         >
           Finalizar venta
         </button>
