@@ -10,6 +10,7 @@ import {
 
 import {
   createProduct,
+  deleteProduct,
   getProductById,
   getProducts,
   updateProduct,
@@ -209,6 +210,53 @@ export async function addProduct(
     return res.status(500).json({
       message:
         'Error al crear el producto',
+    })
+  }
+
+  
+}
+
+// ------------------------------------
+// Eliminar producto
+// ------------------------------------
+
+export async function removeProduct(
+  req: Request,
+  res: Response,
+) {
+  try {
+    const id = Number(req.params.id)
+
+    if (
+      !Number.isInteger(id) ||
+      id <= 0
+    ) {
+      return res.status(400).json({
+        message:
+          'El ID del producto no es válido',
+      })
+    }
+
+    const product =
+      await deleteProduct(id)
+
+    if (!product) {
+      return res.status(404).json({
+        message:
+          'Producto no encontrado',
+      })
+    }
+
+    return res.status(204).send()
+  } catch (error) {
+    console.error(
+      'Error eliminando producto:',
+      error,
+    )
+
+    return res.status(500).json({
+      message:
+        'Error al eliminar el producto',
     })
   }
 }

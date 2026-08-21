@@ -5,6 +5,7 @@ import {
   editProduct,
   showProduct,
   listProducts,
+  removeProduct,
 } from '../controllers/products.controller.js'
 
 const router = Router()
@@ -24,6 +25,11 @@ router.patch(
 router.post(
   '/',
   addProduct,
+)
+
+router.delete(
+  '/:id',
+  removeProduct,
 )
 
 export default router

@@ -6,9 +6,11 @@ import {
 
 import {
   AlertCircle,
+  AlertTriangle,
   LoaderCircle,
   Plus,
   Search,
+  X,
 } from 'lucide-react'
 
 import { useNavigate } from 'react-router'
@@ -17,6 +19,7 @@ import ProductCard from '../../components/products/ProductCard'
 import CategoryFilter from '../../components/products/CategoryFilter'
 
 import {
+  deleteProduct,
   getProducts,
   type Product,
 } from '../../api/products'
@@ -24,7 +27,6 @@ import {
 
 function Products() {
   const navigate = useNavigate()
-
   // ------------------------------------
   // Productos reales
   // ------------------------------------
@@ -53,6 +55,25 @@ function Products() {
 
 
   // ------------------------------------
+  // Eliminar producto
+  // ------------------------------------
+
+  const [
+    productToDelete,
+    setProductToDelete,
+  ] = useState<{
+    id: number
+    name: string
+  } | null>(null)
+
+  const [deleting, setDeleting] =
+    useState(false)
+
+  const [deleteError, setDeleteError] =
+    useState('')
+
+
+  // ------------------------------------
   // Cargar productos desde backend
   // ------------------------------------
 
@@ -71,7 +92,6 @@ function Products() {
           'Error cargando productos:',
           error,
         )
-
         setError(
           'No fue posible cargar los productos.',
         )
@@ -92,7 +112,6 @@ function Products() {
     useMemo(() => {
       const query =
         search.trim().toLowerCase()
-
       return products.filter(
         (product) => {
           const matchesCategory =
@@ -100,7 +119,6 @@ function Products() {
               'Todos' ||
             product.category ===
               selectedCategory
-
           const matchesSearch =
             query === '' ||
             product.name
@@ -126,6 +144,80 @@ function Products() {
     ])
 
 
+  // ------------------------------------
+  // Solicitar eliminación
+  // ------------------------------------
+
+  const requestDeleteProduct = (
+    id: number,
+    name: string,
+  ) => {
+    setDeleteError('')
+
+    setProductToDelete({
+      id,
+      name,
+    })
+  }
+
+
+  // ------------------------------------
+  // Cerrar modal de eliminación
+  // ------------------------------------
+
+  const closeDeleteModal = () => {
+    if (deleting) {
+      return
+    }
+
+    setProductToDelete(null)
+    setDeleteError('')
+  }
+
+
+  // ------------------------------------
+  // Confirmar eliminación
+  // ------------------------------------
+
+  const confirmDeleteProduct =
+    async () => {
+      if (!productToDelete) {
+        return
+      }
+
+      try {
+        setDeleting(true)
+        setDeleteError('')
+
+        await deleteProduct(
+          productToDelete.id,
+        )
+
+        setProducts(
+          (currentProducts) =>
+            currentProducts.filter(
+              (product) =>
+                product.id !==
+                productToDelete.id,
+            ),
+        )
+
+        setProductToDelete(null)
+      } catch (error) {
+        console.error(
+          'Error eliminando producto:',
+          error,
+        )
+
+        setDeleteError(
+          'No fue posible eliminar el producto.',
+        )
+      } finally {
+        setDeleting(false)
+      }
+    }
+
+
   return (
     <section>
       {/* Encabezado */}
@@ -149,7 +241,6 @@ function Products() {
             productos de C&S Repuestos.
           </p>
         </div>
-
         <button
           type="button"
           onClick={() =>
@@ -172,7 +263,6 @@ function Products() {
           "
         >
           <Plus size={19} />
-
           Agregar producto
         </button>
       </header>
@@ -194,7 +284,6 @@ function Products() {
             text-slate-400
           "
         />
-
         <input
           type="search"
           value={search}
@@ -220,7 +309,6 @@ function Products() {
         />
       </div>
 
-
       {/* Contenido */}
       <div
         className="
@@ -241,7 +329,6 @@ function Products() {
 
         {/* Catálogo */}
         <div>
-
           {/* Cargando */}
           {loading && (
             <div
@@ -264,14 +351,12 @@ function Products() {
                     text-blue-600
                   "
                 />
-
                 <p className="mt-3 text-sm text-slate-500">
                   Cargando productos...
                 </p>
               </div>
             </div>
           )}
-
 
           {/* Error */}
           {!loading && error && (
@@ -294,7 +379,6 @@ function Products() {
                     text-red-500
                   "
                 />
-
                 <p className="mt-3 font-medium text-red-700">
                   {error}
                 </p>
@@ -306,7 +390,6 @@ function Products() {
               </div>
             </div>
           )}
-
 
           {/* Productos */}
           {!loading &&
@@ -342,12 +425,14 @@ function Products() {
                       shortDescription={
                         product.shortDescription
                       }
+                      onDelete={
+                        requestDeleteProduct
+                      }
                     />
                   ),
                 )}
               </div>
             )}
-
 
           {/* Sin resultados */}
           {!loading &&
@@ -373,7 +458,6 @@ function Products() {
                     No se encontraron
                     productos.
                   </p>
-
                   <p className="mt-1 text-sm text-slate-500">
                     Prueba cambiando la
                     búsqueda o la categoría.
@@ -383,6 +467,144 @@ function Products() {
             )}
         </div>
       </div>
+
+
+      {/* ==================================
+          MODAL ELIMINAR PRODUCTO
+      ================================== */}
+
+      {productToDelete && (
+        <div
+          className="
+            fixed inset-0 z-50
+            flex items-center justify-center
+            bg-slate-950/50
+            p-4
+          "
+        >
+          <div
+            className="
+              w-full max-w-md
+              rounded-2xl
+              bg-white
+              p-6
+              shadow-xl
+            "
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div
+                  className="
+                    flex h-11 w-11
+                    shrink-0
+                    items-center justify-center
+                    rounded-full
+                    bg-red-100
+                    text-red-600
+                  "
+                >
+                  <AlertTriangle
+                    size={22}
+                  />
+                </div>
+
+                <div>
+                  <h2 className="text-xl font-semibold text-slate-900">
+                    ¿Eliminar producto?
+                  </h2>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    Esta acción no se puede
+                    deshacer.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeDeleteModal}
+                disabled={deleting}
+                className="
+                  rounded-lg p-2
+                  text-slate-400
+                  transition
+                  hover:bg-slate-100
+                  hover:text-slate-600
+                "
+                aria-label="Cerrar"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div
+              className="
+                mt-6
+                rounded-xl
+                border border-red-100
+                bg-red-50
+                p-4
+              "
+            >
+              <p className="text-sm text-red-700">
+                Se eliminará{' '}
+                <span className="font-semibold">
+                  {productToDelete.name}
+                </span>{' '}
+                del catálogo.
+              </p>
+            </div>
+
+            {deleteError && (
+              <p className="mt-4 text-sm text-red-600">
+                {deleteError}
+              </p>
+            )}
+
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={closeDeleteModal}
+                disabled={deleting}
+                className="
+                  flex-1 rounded-xl
+                  border border-slate-300
+                  bg-white
+                  px-4 py-3
+                  font-medium text-slate-700
+                  transition
+                  hover:bg-slate-50
+                  disabled:opacity-50
+                "
+              >
+                Volver
+              </button>
+
+              <button
+                type="button"
+                onClick={
+                  confirmDeleteProduct
+                }
+                disabled={deleting}
+                className="
+                  flex-1 rounded-xl
+                  bg-red-600
+                  px-4 py-3
+                  font-medium text-white
+                  transition
+                  hover:bg-red-700
+                  disabled:cursor-not-allowed
+                  disabled:opacity-50
+                "
+              >
+                {deleting
+                  ? 'Eliminando...'
+                  : 'Sí, eliminar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   )
 }

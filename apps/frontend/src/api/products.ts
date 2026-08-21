@@ -36,6 +36,22 @@ export async function getProducts() {
 
 
 // ------------------------------------
+// Obtener producto por ID
+// ------------------------------------
+
+export async function getProductById(
+  id: number,
+) {
+  const response =
+    await api.get<Product>(
+      `/products/${id}`,
+    )
+
+  return response.data
+}
+
+
+// ------------------------------------
 // Crear producto
 // ------------------------------------
 
@@ -50,6 +66,7 @@ export async function createProduct(
 
   return response.data
 }
+
 
 // ------------------------------------
 // Editar producto
@@ -68,13 +85,15 @@ export async function updateProduct(
   return response.data
 }
 
-export async function getProductById(
+
+// ------------------------------------
+// Eliminar producto
+// ------------------------------------
+
+export async function deleteProduct(
   id: number,
 ) {
-  const response =
-    await api.get<Product>(
-      `/products/${id}`,
-    )
-
-  return response.data
+  await api.delete(
+    `/products/${id}`,
+  )
 }

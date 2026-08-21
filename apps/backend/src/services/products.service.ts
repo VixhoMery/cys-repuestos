@@ -162,3 +162,22 @@ export async function updateProduct(
 
   return result.rows[0] ?? null
 }
+
+// ------------------------------------
+// Eliminar producto
+// ------------------------------------
+
+export async function deleteProduct(
+  id: number,
+) {
+  const result = await pool.query(
+    `
+      DELETE FROM products
+      WHERE id = $1
+      RETURNING id::int AS id
+    `,
+    [id],
+  )
+
+  return result.rows[0] ?? null
+}

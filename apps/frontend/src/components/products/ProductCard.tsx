@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MoreVertical, Pencil } from 'lucide-react'
+import { MoreVertical, Pencil, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 
 type ProductCardProps = {
@@ -10,6 +10,10 @@ type ProductCardProps = {
   stock: number
   shortDescription: string
   image?: string
+  onDelete: (
+    id: number,
+    name: string,
+  ) => void
 }
 
 function ProductCard({
@@ -20,10 +24,10 @@ function ProductCard({
   stock,
   shortDescription,
   image,
+  onDelete,
 }: ProductCardProps) {
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
-
   return (
     <article
       onClick={() => navigate(`/productos/${id}`)}
@@ -51,7 +55,6 @@ function ProductCard({
           </div>
         )}
       </div>
-
       <div className="relative p-4">
         <div className="flex items-start justify-between gap-2">
           <div>
@@ -63,7 +66,6 @@ function ProductCard({
               {name}
             </h3>
           </div>
-
           <div className="relative">
             <button
               type="button"
@@ -76,7 +78,6 @@ function ProductCard({
             >
               <MoreVertical size={19} />
             </button>
-
             {menuOpen && (
               <div
                 onClick={(event) => event.stopPropagation()}
@@ -100,8 +101,29 @@ function ProductCard({
                   "
                 >
                   <Pencil size={16} />
-
                   Editar producto
+                </button>
+
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    setMenuOpen(false)
+                    onDelete(
+                      id,
+                      name,
+                    )
+                  }}
+                  className="
+                    flex w-full items-center gap-2
+                    border-t border-slate-100
+                    px-4 py-3 text-left
+                    text-sm text-red-600
+                    transition hover:bg-red-50
+                  "
+                >
+                  <Trash2 size={16} />
+                  Eliminar producto
                 </button>
               </div>
             )}
@@ -115,7 +137,6 @@ function ProductCard({
         <p className="mt-2 line-clamp-2 text-sm text-slate-500">
           {shortDescription}
         </p>
-
         <div className="mt-4">
           <span
             className={`
@@ -137,5 +158,4 @@ function ProductCard({
     </article>
   )
 }
-
 export default ProductCard
