@@ -3,33 +3,19 @@ import { Router } from 'express'
 import {
   addProduct,
   editProduct,
-  showProduct,
   listProducts,
   removeProduct,
+  saveProductImages,
+  showProduct,
 } from '../controllers/products.controller.js'
 
 const router = Router()
 
-router.get(
-  '/',
-  listProducts,
-)
-
+router.get('/', listProducts)
 router.get('/:id', showProduct)
-
-router.patch(
-  '/:id',
-  editProduct,
-)
-
-router.post(
-  '/',
-  addProduct,
-)
-
-router.delete(
-  '/:id',
-  removeProduct,
-)
+router.post('/', addProduct)
+router.patch('/:id', editProduct)
+router.put('/:id/images', saveProductImages)
+router.delete('/:id', removeProduct)
 
 export default router

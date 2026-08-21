@@ -24,6 +24,10 @@ import {
   type Product,
 } from '../../api/products'
 
+import {
+  removeStorageImages,
+} from '../../lib/productImages'
+
 
 function Products() {
   const navigate = useNavigate()
@@ -189,9 +193,32 @@ function Products() {
         setDeleting(true)
         setDeleteError('')
 
+        const product = products.find(
+          (currentProduct) =>
+            currentProduct.id === productToDelete.id,
+        )
+
+        const storagePaths =
+          product?.images
+            .map((image) => image.storagePath)
+            .filter(
+              (path): path is string => path !== null,
+            ) ?? []
+
         await deleteProduct(
           productToDelete.id,
         )
+
+        if (storagePaths.length > 0) {
+          try {
+            await removeStorageImages(storagePaths)
+          } catch (cleanupError) {
+            console.error(
+              'No fue posible borrar las imágenes del Storage:',
+              cleanupError,
+            )
+          }
+        }
 
         setProducts(
           (currentProducts) =>
@@ -390,7 +417,6 @@ function Products() {
               </div>
             </div>
           )}
-          
 
           {/* Productos */}
           {!loading &&
@@ -425,6 +451,9 @@ function Products() {
                       }
                       shortDescription={
                         product.shortDescription
+                      }
+                      image={
+                        product.image
                       }
                       onDelete={
                         requestDeleteProduct

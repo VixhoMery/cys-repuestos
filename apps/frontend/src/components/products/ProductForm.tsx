@@ -1,7 +1,11 @@
-import { useMemo, useState } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { ImagePlus, X } from 'lucide-react'
+import { ImagePlus, Link, X } from 'lucide-react'
 
 import {
   createProductSchema,
@@ -9,6 +13,10 @@ import {
   type CreateProductInput,
   type EditProductInput,
 } from '@cys-repuestos/schemas'
+
+import type {
+  ProductFormImage,
+} from '../../lib/productImages'
 
 const MAX_IMAGES = 3
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024 // 5 MB
@@ -23,25 +31,46 @@ type ProductFormProps =
   | {
       mode: 'create'
       defaultValues?: Partial<CreateProductInput>
+      initialImages?: ProductFormImage[]
       onSubmit: (
         data: CreateProductInput,
-        images: File[],
+        images: ProductFormImage[],
       ) => void
     }
   | {
       mode: 'edit'
       defaultValues: Partial<EditProductInput>
+      initialImages?: ProductFormImage[]
       onSubmit: (
         data: EditProductInput,
-        images: File[],
+        images: ProductFormImage[],
       ) => void
     }
 
 function ProductForm(props: ProductFormProps) {
   const isEdit = props.mode === 'edit'
 
-  const [images, setImages] = useState<File[]>([])
+  const [images, setImages] = useState<ProductFormImage[]>(
+    () => props.initialImages ?? [],
+  )
+  const [externalImageUrl, setExternalImageUrl] = useState('')
   const [imageError, setImageError] = useState('')
+
+  const imagesRef = useRef(images)
+
+  useEffect(() => {
+    imagesRef.current = images
+  }, [images])
+
+  useEffect(() => {
+    return () => {
+      imagesRef.current.forEach((image) => {
+        if (image.type === 'file') {
+          URL.revokeObjectURL(image.previewUrl)
+        }
+      })
+    }
+  }, [])
 
   const schema = isEdit
     ? editProductSchema
@@ -59,16 +88,6 @@ function ProductForm(props: ProductFormProps) {
     defaultValues: props.defaultValues,
   })
 
-  // Creamos URLs temporales solamente para mostrar previews.
-  const imagePreviews = useMemo(
-    () =>
-      images.map((file) => ({
-        file,
-        url: URL.createObjectURL(file),
-      })),
-    [images],
-  )
-
   const handleImages = (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
@@ -78,59 +97,43 @@ function ProductForm(props: ProductFormProps) {
       event.target.files ?? [],
     )
 
-    if (selectedFiles.length === 0) {
-      return
-    }
+    if (selectedFiles.length === 0) return
 
-    // Validar formato
     const invalidType = selectedFiles.find(
-      (file) =>
-        !ACCEPTED_IMAGE_TYPES.includes(file.type),
+      (file) => !ACCEPTED_IMAGE_TYPES.includes(file.type),
     )
 
     if (invalidType) {
-      setImageError(
-        'Solo se permiten imágenes JPG, PNG o WebP.',
-      )
-
+      setImageError('Solo se permiten imágenes JPG, PNG o WebP.')
       event.target.value = ''
       return
     }
 
-    // Validar peso
     const tooLarge = selectedFiles.find(
       (file) => file.size > MAX_IMAGE_SIZE,
     )
 
     if (tooLarge) {
-      setImageError(
-        'Cada imagen debe pesar como máximo 5 MB.',
-      )
-
+      setImageError('Cada imagen debe pesar como máximo 5 MB.')
       event.target.value = ''
       return
     }
 
-    // Evitar subir dos veces exactamente el mismo archivo
     const newFiles = selectedFiles.filter(
       (selectedFile) =>
         !images.some(
           (currentImage) =>
-            currentImage.name === selectedFile.name &&
-            currentImage.size === selectedFile.size &&
-            currentImage.lastModified ===
-              selectedFile.lastModified,
+            currentImage.type === 'file' &&
+            currentImage.file.name === selectedFile.name &&
+            currentImage.file.size === selectedFile.size &&
+            currentImage.file.lastModified === selectedFile.lastModified,
         ),
     )
 
-    const remainingSlots =
-      MAX_IMAGES - images.length
+    const remainingSlots = MAX_IMAGES - images.length
 
     if (remainingSlots <= 0) {
-      setImageError(
-        'Puedes agregar un máximo de 3 imágenes.',
-      )
-
+      setImageError('Puedes agregar un máximo de 3 imágenes.')
       event.target.value = ''
       return
     }
@@ -145,21 +148,81 @@ function ProductForm(props: ProductFormProps) {
       )
     }
 
+    const fileImages: ProductFormImage[] = newFiles
+      .slice(0, remainingSlots)
+      .map((file) => ({
+        type: 'file',
+        file,
+        previewUrl: URL.createObjectURL(file),
+      }))
+
     setImages((currentImages) => [
       ...currentImages,
-      ...newFiles.slice(0, remainingSlots),
+      ...fileImages,
     ])
 
-    // Permite volver a seleccionar el mismo archivo
-    // después de eliminarlo.
     event.target.value = ''
   }
 
+  const addExternalImage = () => {
+    setImageError('')
+
+    if (images.length >= MAX_IMAGES) {
+      setImageError('Puedes agregar un máximo de 3 imágenes.')
+      return
+    }
+
+    const value = externalImageUrl.trim()
+
+    if (!value) {
+      setImageError('Ingresa una URL de imagen.')
+      return
+    }
+
+    try {
+      const url = new URL(value)
+      if (!['http:', 'https:'].includes(url.protocol)) {
+        throw new Error('invalid protocol')
+      }
+    } catch {
+      setImageError(
+        'Ingresa una URL válida que comience con http:// o https://.',
+      )
+      return
+    }
+
+    const duplicate = images.some((image) => {
+      if (image.type === 'external') return image.externalUrl === value
+      if (image.type === 'existing') return image.externalUrl === value
+      return false
+    })
+
+    if (duplicate) {
+      setImageError('Esa imagen ya fue agregada.')
+      return
+    }
+
+    setImages((currentImages) => [
+      ...currentImages,
+      {
+        type: 'external',
+        externalUrl: value,
+        previewUrl: value,
+      },
+    ])
+
+    setExternalImageUrl('')
+  }
+
   const removeImage = (indexToRemove: number) => {
+    const image = images[indexToRemove]
+
+    if (image?.type === 'file') {
+      URL.revokeObjectURL(image.previewUrl)
+    }
+
     setImages((currentImages) =>
-      currentImages.filter(
-        (_, index) => index !== indexToRemove,
-      ),
+      currentImages.filter((_, index) => index !== indexToRemove),
     )
 
     setImageError('')
@@ -169,15 +232,9 @@ function ProductForm(props: ProductFormProps) {
     data: CreateProductInput | EditProductInput,
   ) => {
     if (props.mode === 'edit') {
-      props.onSubmit(
-        data as EditProductInput,
-        images,
-      )
+      props.onSubmit(data as EditProductInput, images)
     } else {
-      props.onSubmit(
-        data as CreateProductInput,
-        images,
-      )
+      props.onSubmit(data as CreateProductInput, images)
     }
   }
 
@@ -443,7 +500,7 @@ function ProductForm(props: ProductFormProps) {
               </label>
 
               <p className="mt-1 text-sm text-slate-500">
-                JPG, PNG o WebP. Máximo 3 imágenes.
+                JPG, PNG, WebP o URL pública. Máximo 3 imágenes.
               </p>
             </div>
 
@@ -487,6 +544,69 @@ function ProductForm(props: ProductFormProps) {
             </label>
           )}
 
+          {/* URL externa */}
+          {images.length < MAX_IMAGES && (
+            <div className="mt-4">
+              <label className="mb-2 block text-sm font-medium text-slate-700">
+                O usar imagen desde Internet
+              </label>
+
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Link
+                    size={18}
+                    className="
+                      absolute left-4 top-1/2
+                      -translate-y-1/2
+                      text-slate-400
+                    "
+                  />
+
+                  <input
+                    type="url"
+                    value={externalImageUrl}
+                    onChange={(event) =>
+                      setExternalImageUrl(event.target.value)
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault()
+                        addExternalImage()
+                      }
+                    }}
+                    placeholder="https://sitio.com/imagen.jpg"
+                    className="
+                      w-full rounded-lg
+                      border border-slate-300
+                      py-3 pl-11 pr-4
+                      outline-none
+                      transition
+                      focus:border-blue-500
+                      focus:ring-2
+                      focus:ring-blue-100
+                    "
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={addExternalImage}
+                  className="
+                    rounded-lg
+                    border border-slate-300
+                    bg-white
+                    px-4 py-3
+                    font-medium text-slate-700
+                    transition
+                    hover:bg-slate-50
+                  "
+                >
+                  Agregar URL
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Mensajes */}
           {imageError && (
             <p className="mt-2 text-sm text-red-600">
@@ -495,66 +615,68 @@ function ProductForm(props: ProductFormProps) {
           )}
 
           {/* Previews */}
-          {imagePreviews.length > 0 && (
+          {images.length > 0 && (
             <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
-              {imagePreviews.map(
-                ({ file, url }, index) => (
-                  <div
-                    key={`${file.name}-${file.lastModified}`}
+              {images.map((image, index) => (
+                <div
+                  key={
+                    image.type === 'file'
+                      ? `${image.file.name}-${image.file.lastModified}`
+                      : image.type === 'existing'
+                        ? `existing-${image.id}`
+                        : `external-${image.externalUrl}`
+                  }
+                  className="
+                    relative
+                    aspect-square
+                    overflow-hidden
+                    rounded-xl
+                    border border-slate-200
+                    bg-slate-100
+                  "
+                >
+                  <img
+                    src={image.previewUrl}
+                    alt={`Vista previa ${index + 1}`}
+                    className="h-full w-full object-cover"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => removeImage(index)}
                     className="
-                      relative
-                      aspect-square
-                      overflow-hidden
-                      rounded-xl
-                      border border-slate-200
-                      bg-slate-100
+                      absolute right-2 top-2
+                      flex h-8 w-8
+                      items-center justify-center
+                      rounded-full
+                      bg-white/90
+                      text-slate-600
+                      shadow
+                      transition
+                      hover:bg-red-500
+                      hover:text-white
                     "
+                    aria-label="Eliminar fotografía"
                   >
-                    <img
-                      src={url}
-                      alt={`Vista previa ${index + 1}`}
-                      className="h-full w-full object-cover"
-                    />
+                    <X size={16} />
+                  </button>
 
-                    <button
-                      type="button"
-                      onClick={() =>
-                        removeImage(index)
-                      }
+                  {index === 0 && (
+                    <span
                       className="
-                        absolute right-2 top-2
-                        flex h-8 w-8
-                        items-center justify-center
+                        absolute bottom-2 left-2
                         rounded-full
-                        bg-white/90
-                        text-slate-600
-                        shadow
-                        transition
-                        hover:bg-red-500
-                        hover:text-white
+                        bg-slate-900/80
+                        px-2.5 py-1
+                        text-xs font-medium
+                        text-white
                       "
-                      aria-label="Eliminar fotografía"
                     >
-                      <X size={16} />
-                    </button>
-
-                    {index === 0 && (
-                      <span
-                        className="
-                          absolute bottom-2 left-2
-                          rounded-full
-                          bg-slate-900/80
-                          px-2.5 py-1
-                          text-xs font-medium
-                          text-white
-                        "
-                      >
-                        Principal
-                      </span>
-                    )}
-                  </div>
-                ),
-              )}
+                      Principal
+                    </span>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </div>

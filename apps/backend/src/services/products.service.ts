@@ -1,6 +1,7 @@
 import type {
   CreateProductInput,
   EditProductInput,
+  ProductImageInput,
 } from '@cys-repuestos/schemas'
 
 import { pool } from '../db/pool.js'
@@ -13,19 +14,35 @@ import { pool } from '../db/pool.js'
 export async function getProducts() {
   const result = await pool.query(`
     SELECT
-      id::int AS id,
-      name,
-      brand,
-      sku,
-      category,
-      price,
-      stock,
-      short_description AS "shortDescription",
-      description,
-      created_at AS "createdAt",
-      updated_at AS "updatedAt"
-    FROM products
-    ORDER BY created_at DESC
+      p.id::int AS id,
+      p.name,
+      p.brand,
+      p.sku,
+      p.category,
+      p.price,
+      p.stock,
+      p.short_description AS "shortDescription",
+      p.description,
+      p.created_at AS "createdAt",
+      p.updated_at AS "updatedAt",
+      COALESCE(
+        (
+          SELECT json_agg(
+            json_build_object(
+              'id', pi.id::int,
+              'storagePath', pi.storage_path,
+              'externalUrl', pi.external_url,
+              'position', pi.position
+            )
+            ORDER BY pi.position
+          )
+          FROM product_images pi
+          WHERE pi.product_id = p.id
+        ),
+        '[]'::json
+      ) AS images
+    FROM products p
+    ORDER BY p.created_at DESC
   `)
 
   return result.rows
@@ -83,8 +100,16 @@ export async function createProduct(
     ],
   )
 
-  return result.rows[0]
+  return {
+    ...result.rows[0],
+    images: [],
+  }
 }
+
+
+// ------------------------------------
+// Obtener producto por ID
+// ------------------------------------
 
 export async function getProductById(
   id: number,
@@ -92,25 +117,42 @@ export async function getProductById(
   const result = await pool.query(
     `
       SELECT
-        id::int AS id,
-        name,
-        brand,
-        sku,
-        category,
-        price,
-        stock,
-        short_description AS "shortDescription",
-        description,
-        created_at AS "createdAt",
-        updated_at AS "updatedAt"
-      FROM products
-      WHERE id = $1
+        p.id::int AS id,
+        p.name,
+        p.brand,
+        p.sku,
+        p.category,
+        p.price,
+        p.stock,
+        p.short_description AS "shortDescription",
+        p.description,
+        p.created_at AS "createdAt",
+        p.updated_at AS "updatedAt",
+        COALESCE(
+          (
+            SELECT json_agg(
+              json_build_object(
+                'id', pi.id::int,
+                'storagePath', pi.storage_path,
+                'externalUrl', pi.external_url,
+                'position', pi.position
+              )
+              ORDER BY pi.position
+            )
+            FROM product_images pi
+            WHERE pi.product_id = p.id
+          ),
+          '[]'::json
+        ) AS images
+      FROM products p
+      WHERE p.id = $1
     `,
     [id],
   )
 
   return result.rows[0] ?? null
 }
+
 
 // ------------------------------------
 // Editar producto
@@ -134,18 +176,7 @@ export async function updateProduct(
         description = $8,
         updated_at = NOW()
       WHERE id = $9
-      RETURNING
-        id::int AS id,
-        name,
-        brand,
-        sku,
-        category,
-        price,
-        stock,
-        short_description AS "shortDescription",
-        description,
-        created_at AS "createdAt",
-        updated_at AS "updatedAt"
+      RETURNING id::int AS id
     `,
     [
       product.name,
@@ -160,8 +191,80 @@ export async function updateProduct(
     ],
   )
 
-  return result.rows[0] ?? null
+  if (!result.rows[0]) {
+    return null
+  }
+
+  return getProductById(id)
 }
+
+
+// ------------------------------------
+// Reemplazar imágenes de un producto
+// ------------------------------------
+
+export async function replaceProductImages(
+  productId: number,
+  images: ProductImageInput[],
+) {
+  const client = await pool.connect()
+
+  try {
+    await client.query('BEGIN')
+
+    await client.query(
+      `
+        DELETE FROM product_images
+        WHERE product_id = $1
+      `,
+      [productId],
+    )
+
+    for (const image of images) {
+      await client.query(
+        `
+          INSERT INTO product_images (
+            product_id,
+            storage_path,
+            external_url,
+            position
+          )
+          VALUES ($1, $2, $3, $4)
+        `,
+        [
+          productId,
+          image.storagePath,
+          image.externalUrl,
+          image.position,
+        ],
+      )
+    }
+
+    await client.query('COMMIT')
+
+    const result = await pool.query(
+      `
+        SELECT
+          id::int AS id,
+          storage_path AS "storagePath",
+          external_url AS "externalUrl",
+          position
+        FROM product_images
+        WHERE product_id = $1
+        ORDER BY position
+      `,
+      [productId],
+    )
+
+    return result.rows
+  } catch (error) {
+    await client.query('ROLLBACK')
+    throw error
+  } finally {
+    client.release()
+  }
+}
+
 
 // ------------------------------------
 // Eliminar producto

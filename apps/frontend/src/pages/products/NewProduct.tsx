@@ -6,38 +6,65 @@ import type { CreateProductInput } from "@cys-repuestos/schemas";
 
 import ProductForm from "../../components/products/ProductForm";
 
-import { createProduct } from "../../api/products";
+import {
+  createProduct,
+  deleteProduct,
+  replaceProductImages,
+} from "../../api/products";
+
+import {
+  prepareProductImages,
+  removeStorageImages,
+  type ProductFormImage,
+} from "../../lib/productImages";
 
 function NewProduct() {
   const navigate = useNavigate();
-
   const [error, setError] = useState("");
-
   const [saving, setSaving] = useState(false);
 
-  // ------------------------------------
-  // Crear producto
-  // ------------------------------------
+  const handleSubmit = async (
+    data: CreateProductInput,
+    images: ProductFormImage[],
+  ) => {
+    let createdProductId: number | null = null;
+    let uploadedPaths: string[] = [];
 
-  const handleSubmit = async (data: CreateProductInput, images: File[]) => {
     try {
       setSaving(true);
       setError("");
 
       const product = await createProduct(data);
+      createdProductId = product.id;
 
-      console.log("Producto creado:", product);
+      if (images.length > 0) {
+        const prepared = await prepareProductImages(product.id, images);
+        uploadedPaths = prepared.uploadedPaths;
 
-      // Las imágenes las conectaremos
-      // más adelante con Supabase Storage.
-      console.log("Imágenes pendientes:", images);
+        await replaceProductImages(product.id, prepared.metadata);
+      }
 
       navigate("/productos");
     } catch (error: any) {
       console.error("Error creando producto:", error);
 
-      const message = error?.response?.data?.message;
+      if (uploadedPaths.length > 0) {
+        try {
+          await removeStorageImages(uploadedPaths);
+        } catch (cleanupError) {
+          console.error("No fue posible limpiar las imágenes subidas:", cleanupError);
+        }
+      }
 
+      if (createdProductId !== null) {
+        try {
+          await deleteProduct(createdProductId);
+        } catch (cleanupError) {
+          console.error("No fue posible revertir el producto creado:", cleanupError);
+        }
+      }
+
+      const message = error?.response?.data?.message;
       setError(message || "No fue posible crear el producto.");
     } finally {
       setSaving(false);

@@ -16,64 +16,41 @@ import type {
 
 import {
   getProductById,
+  replaceProductImages,
   updateProduct,
+  type Product,
 } from '../../api/products'
 
+import {
+  prepareProductImages,
+  removeStorageImages,
+  type ProductFormImage,
+} from '../../lib/productImages'
 
 function EditProduct() {
   const navigate = useNavigate()
   const { id } = useParams()
 
-  const [
-    product,
-    setProduct,
-  ] = useState<EditProductInput | null>(
-    null,
-  )
+  const [product, setProduct] =
+    useState<Product | null>(null)
 
   const [loading, setLoading] =
     useState(true)
-
-
-  // ------------------------------------
-  // Cargar producto real
-  // ------------------------------------
 
   useEffect(() => {
     const loadProduct = async () => {
       const productId = Number(id)
 
-      if (
-        !Number.isInteger(productId) ||
-        productId <= 0
-      ) {
+      if (!Number.isInteger(productId) || productId <= 0) {
         setLoading(false)
         return
       }
 
       try {
-        const data =
-          await getProductById(
-            productId,
-          )
-
-        setProduct({
-          name: data.name,
-          brand: data.brand,
-          sku: data.sku,
-          category: data.category,
-          price: data.price,
-          stock: data.stock,
-          shortDescription:
-            data.shortDescription,
-          description:
-            data.description,
-        })
+        const data = await getProductById(productId)
+        setProduct(data)
       } catch (error) {
-        console.error(
-          'Error cargando producto:',
-          error,
-        )
+        console.error('Error cargando producto:', error)
       } finally {
         setLoading(false)
       }
@@ -82,66 +59,92 @@ function EditProduct() {
     loadProduct()
   }, [id])
 
-
-  // ------------------------------------
-  // Guardar cambios reales
-  // ------------------------------------
-
   const handleEditProduct = async (
     data: EditProductInput,
-    images: File[],
+    images: ProductFormImage[],
   ) => {
     const productId = Number(id)
 
+    if (!product) return
+
+    let uploadedPaths: string[] = []
+
     try {
-      await updateProduct(
-        productId,
-        data,
+      await updateProduct(productId, data)
+
+      const prepared = await prepareProductImages(productId, images)
+      uploadedPaths = prepared.uploadedPaths
+
+      await replaceProductImages(productId, prepared.metadata)
+
+      const retainedStoragePaths = new Set(
+        prepared.metadata
+          .map((image) => image.storagePath)
+          .filter((path): path is string => path !== null),
       )
 
-      // Las imágenes todavía no se guardan.
-      // Las conectaremos después con Storage.
-      console.log(
-        'Nuevas fotografías:',
-        images,
-      )
+      const removedStoragePaths = product.images
+        .map((image) => image.storagePath)
+        .filter(
+          (path): path is string =>
+            path !== null && !retainedStoragePaths.has(path),
+        )
 
-      navigate(
-        `/productos/${productId}`,
-      )
+      if (removedStoragePaths.length > 0) {
+        try {
+          await removeStorageImages(removedStoragePaths)
+        } catch (cleanupError) {
+          console.error(
+            'No fue posible borrar archivos antiguos del Storage:',
+            cleanupError,
+          )
+        }
+      }
+
+      navigate(`/productos/${productId}`)
     } catch (error) {
-      console.error(
-        'Error editando producto:',
-        error,
-      )
+      console.error('Error editando producto:', error)
+
+      if (uploadedPaths.length > 0) {
+        try {
+          await removeStorageImages(uploadedPaths)
+        } catch (cleanupError) {
+          console.error('No fue posible limpiar las imágenes nuevas:', cleanupError)
+        }
+      }
     }
   }
 
-
-  // ------------------------------------
-  // Esperar producto
-  // ------------------------------------
-
   if (loading) {
-    return (
-      <p>
-        Cargando producto...
-      </p>
-    )
+    return <p>Cargando producto...</p>
   }
 
   if (!product) {
-    return (
-      <p>
-        Producto no encontrado.
-      </p>
-    )
+    return <p>Producto no encontrado.</p>
   }
+
+  const initialImages: ProductFormImage[] = product.images.map((image) => ({
+    type: 'existing',
+    id: image.id,
+    storagePath: image.storagePath,
+    externalUrl: image.externalUrl,
+    previewUrl: image.url,
+  }))
 
   return (
     <ProductForm
       mode="edit"
-      defaultValues={product}
+      defaultValues={{
+        name: product.name,
+        brand: product.brand,
+        sku: product.sku,
+        category: product.category,
+        price: product.price,
+        stock: product.stock,
+        shortDescription: product.shortDescription,
+        description: product.description,
+      }}
+      initialImages={initialImages}
       onSubmit={handleEditProduct}
     />
   )
