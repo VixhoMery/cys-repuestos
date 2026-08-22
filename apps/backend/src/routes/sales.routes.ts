@@ -2,6 +2,7 @@ import { Router } from 'express'
 
 import {
   addSale,
+  listSales,
 } from '../controllers/sales.controller.js'
 
 import {
@@ -9,6 +10,12 @@ import {
 } from '../middleware/auth.middleware.js'
 
 const router = Router()
+
+router.get(
+  '/',
+  requireAuth,
+  listSales,
+)
 
 router.post(
   '/',

@@ -212,3 +212,59 @@ export async function createSale(
     client.release()
   }
 }
+
+
+// ------------------------------------
+// Listar ventas
+// ------------------------------------
+
+export async function getSales() {
+  const result = await pool.query(
+    `
+      SELECT
+        s.id::int AS id,
+        COALESCE(
+          s.seller_email,
+          'Usuario eliminado'
+        ) AS seller,
+        s.sold_at AS "soldAt",
+        s.total_amount AS total,
+
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'productId',
+                si.product_id::int,
+              'name',
+                si.product_name,
+              'quantity',
+                si.quantity,
+              'unitPrice',
+                si.unit_price
+            )
+            ORDER BY si.id
+          )
+          FILTER (
+            WHERE si.id IS NOT NULL
+          ),
+          '[]'::json
+        ) AS items
+
+      FROM sales AS s
+
+      LEFT JOIN sale_items AS si
+        ON si.sale_id = s.id
+
+      GROUP BY
+        s.id,
+        s.seller_email,
+        s.sold_at,
+        s.total_amount
+
+      ORDER BY
+        s.sold_at DESC
+    `,
+  )
+
+  return result.rows
+}

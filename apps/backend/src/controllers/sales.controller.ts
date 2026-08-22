@@ -12,8 +12,36 @@ import type {
 
 import {
   createSale,
+  getSales,
   SaleError,
 } from '../services/sales.service.js'
+
+
+// ------------------------------------
+// Listar ventas
+// ------------------------------------
+
+export async function listSales(
+  _req: AuthenticatedRequest,
+  res: Response,
+) {
+  try {
+    const sales =
+      await getSales()
+
+    return res.json(sales)
+  } catch (error) {
+    console.error(
+      'Error obteniendo ventas:',
+      error,
+    )
+
+    return res.status(500).json({
+      message:
+        'No fue posible obtener las ventas.',
+    })
+  }
+}
 
 
 // ------------------------------------

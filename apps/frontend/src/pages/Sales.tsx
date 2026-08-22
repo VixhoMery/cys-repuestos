@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   CalendarDays,
   Eye,
@@ -8,111 +8,10 @@ import {
   X,
 } from 'lucide-react'
 
-
-// ------------------------------------
-// Tipos
-// ------------------------------------
-
-type SaleItem = {
-  productId: number
-  name: string
-  quantity: number
-  unitPrice: number
-}
-
-type Sale = {
-  id: number
-  seller: string
-  soldAt: string
-  total: number
-  items: SaleItem[]
-}
-
-
-// ------------------------------------
-// Datos temporales
-// Después vendrán desde el backend
-// ------------------------------------
-
-const sales: Sale[] = [
-  {
-    id: 101,
-    seller: 'Vicente',
-    soldAt: '2026-08-20T18:42:00',
-    total: 197980,
-    items: [
-      {
-        productId: 1,
-        name: 'Alternador Toyota Yaris',
-        quantity: 1,
-        unitPrice: 180000,
-      },
-      {
-        productId: 3,
-        name: 'Filtro de aceite',
-        quantity: 2,
-        unitPrice: 8990,
-      },
-    ],
-  },
-
-  {
-    id: 102,
-    seller: 'Camila',
-    soldAt: '2026-08-20T16:15:00',
-    total: 91980,
-    items: [
-      {
-        productId: 2,
-        name: 'Pastillas de freno',
-        quantity: 2,
-        unitPrice: 45990,
-      },
-    ],
-  },
-
-  {
-    id: 103,
-    seller: 'Vicente',
-    soldAt: '2026-08-19T12:08:00',
-    total: 74990,
-    items: [
-      {
-        productId: 4,
-        name: 'Neumático 195/65 R15',
-        quantity: 1,
-        unitPrice: 74990,
-      },
-    ],
-  },
-
-  {
-    id: 104,
-    seller: 'Camila',
-    soldAt: '2026-08-18T10:32:00',
-    total: 107970,
-    items: [
-      {
-        productId: 2,
-        name: 'Pastillas de freno',
-        quantity: 1,
-        unitPrice: 45990,
-      },
-      {
-        productId: 3,
-        name: 'Filtro de aceite',
-        quantity: 2,
-        unitPrice: 8990,
-      },
-      {
-        productId: 4,
-        name: 'Neumático 195/65 R15',
-        quantity: 1,
-        unitPrice: 43990,
-      },
-    ],
-  },
-]
+import {
+  getSales,
+  type Sale,
+} from '../api/sales'
 
 
 function Sales() {
@@ -120,12 +19,38 @@ function Sales() {
   // Estados
   // ------------------------------------
 
+  const [sales, setSales] =
+    useState<Sale[]>([])
+
   const [search, setSearch] = useState('')
   const [selectedDate, setSelectedDate] =
     useState('')
 
   const [selectedSale, setSelectedSale] =
     useState<Sale | null>(null)
+
+
+  // ------------------------------------
+  // Cargar ventas reales
+  // ------------------------------------
+
+  useEffect(() => {
+    const loadSales = async () => {
+      try {
+        const data =
+          await getSales()
+
+        setSales(data)
+      } catch (error) {
+        console.error(
+          'Error cargando ventas:',
+          error,
+        )
+      }
+    }
+
+    loadSales()
+  }, [])
 
 
   // ------------------------------------
@@ -732,9 +657,7 @@ function Sales() {
               {selectedSale.items.map(
                 (item) => (
                   <div
-                    key={
-                      item.productId
-                    }
+                    key={`${item.productId ?? 'deleted'}-${item.name}`}
                     className="
                       flex
                       justify-between
