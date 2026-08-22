@@ -138,7 +138,7 @@ function Sales() {
         )
       })
     },
-    [search, selectedDate],
+    [sales, search, selectedDate],
   )
 
 

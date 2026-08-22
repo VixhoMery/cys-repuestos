@@ -1,0 +1,113 @@
+C&S Repuestos - Pruebas automáticas E2E con Playwright
+
+Este parche NO modifica el frontend ni el backend.
+Solo agrega infraestructura y pruebas.
+
+===========================================================
+1. INSTALAR PLAYWRIGHT
+===========================================================
+
+Desde la raíz de cys-repuestos:
+
+pnpm add -D -w @playwright/test dotenv
+
+Luego instala Chromium:
+
+pnpm exec playwright install chromium
+
+
+===========================================================
+2. CREAR USUARIO DE PRUEBAS
+===========================================================
+
+En Supabase:
+
+Authentication -> Users -> Add user
+
+Recomendación:
+crear un usuario exclusivo para E2E.
+No uses la contraseña de una cuenta personal/administrativa real.
+
+
+===========================================================
+3. CONFIGURAR CREDENCIALES
+===========================================================
+
+Copia:
+
+.env.e2e.example
+
+como:
+
+.env.e2e
+
+y completa:
+
+E2E_TEST_EMAIL=...
+E2E_TEST_PASSWORD=...
+
+.env.e2e NO debe subirse a GitHub.
+
+
+===========================================================
+4. EJECUTAR
+===========================================================
+
+No necesitas levantar manualmente frontend/backend.
+Playwright puede levantarlos mediante playwright.config.ts.
+
+Ejecuta:
+
+pnpm exec playwright test
+
+
+===========================================================
+5. VER EL REPORTE
+===========================================================
+
+pnpm exec playwright show-report
+
+
+Modo visual:
+
+pnpm exec playwright test --headed
+
+Interfaz interactiva:
+
+pnpm exec playwright test --ui
+
+
+===========================================================
+PRUEBAS INCLUIDAS
+===========================================================
+
+auth.spec.ts
+- Ruta privada sin sesión -> /login
+- Login correcto
+- Logout correcto
+
+product-validation.spec.ts
+- Campos obligatorios
+- Descripción corta máximo 50
+- Descripción completa máximo 120
+- Precio acepta solo dígitos
+
+product-crud.spec.ts
+- Crear producto temporal
+- Ver producto
+- Editar precio y stock
+- Confirmar persistencia
+- Eliminar producto
+- Limpieza defensiva si el test falla
+
+
+===========================================================
+IMPORTANTE
+===========================================================
+
+El test CRUD usa la base de datos real del entorno de desarrollo.
+El producto se identifica como "E2E Producto <timestamp>" y se elimina
+al finalizar.
+
+Para CI/producción, lo ideal más adelante será usar un proyecto Supabase
+de testing separado.
