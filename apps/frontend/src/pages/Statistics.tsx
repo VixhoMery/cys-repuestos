@@ -1,4 +1,8 @@
-import { useState } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 import {
   BadgeDollarSign,
   PackageCheck,
@@ -20,6 +24,11 @@ import {
   YAxis,
 } from 'recharts'
 
+import {
+  getSales,
+  type Sale,
+} from '../api/sales'
+
 
 // ------------------------------------
 // Tipos
@@ -32,119 +41,286 @@ type Period =
   | 'year'
 
 
-// ------------------------------------
-// Datos mock
-// Después vendrán desde PostgreSQL
-// ------------------------------------
-
-const salesByPeriod = {
-  day: [
-    { label: '09:00', total: 85000 },
-    { label: '11:00', total: 144000 },
-    { label: '13:00', total: 92000 },
-    { label: '15:00', total: 198000 },
-    { label: '17:00', total: 156000 },
-    { label: '19:00', total: 224000 },
-  ],
-
-  week: [
-    { label: 'Lun', total: 428000 },
-    { label: 'Mar', total: 512000 },
-    { label: 'Mié', total: 384000 },
-    { label: 'Jue', total: 625000 },
-    { label: 'Vie', total: 743000 },
-    { label: 'Sáb', total: 318000 },
-  ],
-
-  month: [
-    { label: 'Sem 1', total: 1850000 },
-    { label: 'Sem 2', total: 2140000 },
-    { label: 'Sem 3', total: 1920000 },
-    { label: 'Sem 4', total: 2470000 },
-  ],
-
-  year: [
-    { label: 'Ene', total: 5400000 },
-    { label: 'Feb', total: 5900000 },
-    { label: 'Mar', total: 6200000 },
-    { label: 'Abr', total: 5800000 },
-    { label: 'May', total: 6900000 },
-    { label: 'Jun', total: 7100000 },
-    { label: 'Jul', total: 7450000 },
-    { label: 'Ago', total: 6820000 },
-  ],
+type ChartPoint = {
+  label: string
+  total: number
 }
 
 
-const topProducts = [
-  {
-    name: 'Filtro de aceite',
-    units: 42,
-  },
-  {
-    name: 'Pastillas de freno',
-    units: 31,
-  },
-  {
-    name: 'Neumático 195/65 R15',
-    units: 24,
-  },
-  {
-    name: 'Alternador Toyota Yaris',
-    units: 18,
-  },
-]
-
-
-const sellerStats = [
-  {
-    name: 'Vicente',
-    sales: 24,
-    units: 46,
-    total: 1845000,
-  },
-  {
-    name: 'Camila',
-    sales: 19,
-    units: 37,
-    total: 1428000,
-  },
-  {
-    name: 'Daniel',
-    sales: 15,
-    units: 29,
-    total: 1105000,
-  },
-]
-
-
 // ------------------------------------
-// Estadísticas
+// Helpers de fecha
 // ------------------------------------
+
+function startOfDay(date: Date) {
+  const result = new Date(date)
+
+  result.setHours(0, 0, 0, 0)
+
+  return result
+}
+
+
+function startOfWeek(date: Date) {
+  const result = startOfDay(date)
+  const day = result.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+
+  result.setDate(result.getDate() + diff)
+
+  return result
+}
+
+
+function addDays(
+  date: Date,
+  days: number,
+) {
+  const result = new Date(date)
+
+  result.setDate(result.getDate() + days)
+
+  return result
+}
+
 
 function Statistics() {
   const [period, setPeriod] =
     useState<Period>('week')
 
-  const currentData =
-    salesByPeriod[period]
+  const [sales, setSales] =
+    useState<Sale[]>([])
 
 
   // ------------------------------------
-  // Resumen temporal
+  // Cargar ventas reales
+  // ------------------------------------
+
+  useEffect(() => {
+    const loadSales = async () => {
+      try {
+        const data = await getSales()
+        setSales(data)
+      } catch (error) {
+        console.error(
+          'Error cargando estadísticas:',
+          error,
+        )
+      }
+    }
+
+    loadSales()
+  }, [])
+
+
+  // ------------------------------------
+  // Ventas del período seleccionado
+  // ------------------------------------
+
+  const filteredSales = useMemo(() => {
+    const now = new Date()
+    const today = startOfDay(now)
+    const tomorrow = addDays(today, 1)
+    const weekStart = startOfWeek(now)
+    const weekEnd = addDays(weekStart, 7)
+
+    return sales.filter((sale) => {
+      const soldAt = new Date(sale.soldAt)
+
+      if (period === 'day') {
+        return (
+          soldAt >= today &&
+          soldAt < tomorrow
+        )
+      }
+
+      if (period === 'week') {
+        return (
+          soldAt >= weekStart &&
+          soldAt < weekEnd
+        )
+      }
+
+      if (period === 'month') {
+        return (
+          soldAt.getFullYear() ===
+            now.getFullYear() &&
+          soldAt.getMonth() ===
+            now.getMonth()
+        )
+      }
+
+      return (
+        soldAt.getFullYear() ===
+        now.getFullYear()
+      )
+    })
+  }, [sales, period])
+
+
+  // ------------------------------------
+  // Datos del gráfico principal
+  // ------------------------------------
+
+  const currentData = useMemo<ChartPoint[]>(() => {
+    if (period === 'day') {
+      const buckets = [
+        { label: '00:00', start: 0 },
+        { label: '04:00', start: 4 },
+        { label: '08:00', start: 8 },
+        { label: '12:00', start: 12 },
+        { label: '16:00', start: 16 },
+        { label: '20:00', start: 20 },
+      ]
+
+      return buckets.map((bucket) => ({
+        label: bucket.label,
+        total: filteredSales
+          .filter((sale) => {
+            const hour =
+              new Date(sale.soldAt).getHours()
+
+            return (
+              hour >= bucket.start &&
+              hour < bucket.start + 4
+            )
+          })
+          .reduce(
+            (sum, sale) =>
+              sum + sale.total,
+            0,
+          ),
+      }))
+    }
+
+    if (period === 'week') {
+      const weekStart =
+        startOfWeek(new Date())
+
+      const labels = [
+        'Lun',
+        'Mar',
+        'Mié',
+        'Jue',
+        'Vie',
+        'Sáb',
+        'Dom',
+      ]
+
+      return labels.map(
+        (label, index) => {
+          const dayStart =
+            addDays(weekStart, index)
+          const dayEnd =
+            addDays(dayStart, 1)
+
+          return {
+            label,
+            total: filteredSales
+              .filter((sale) => {
+                const soldAt =
+                  new Date(sale.soldAt)
+
+                return (
+                  soldAt >= dayStart &&
+                  soldAt < dayEnd
+                )
+              })
+              .reduce(
+                (sum, sale) =>
+                  sum + sale.total,
+                0,
+              ),
+          }
+        },
+      )
+    }
+
+    if (period === 'month') {
+      return [1, 2, 3, 4, 5].map(
+        (week) => ({
+          label: `Sem ${week}`,
+          total: filteredSales
+            .filter((sale) => {
+              const day =
+                new Date(
+                  sale.soldAt,
+                ).getDate()
+
+              return (
+                Math.floor(
+                  (day - 1) / 7,
+                ) + 1 === week
+              )
+            })
+            .reduce(
+              (sum, sale) =>
+                sum + sale.total,
+              0,
+            ),
+        }),
+      )
+    }
+
+    const monthLabels = [
+      'Ene',
+      'Feb',
+      'Mar',
+      'Abr',
+      'May',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dic',
+    ]
+
+    return monthLabels.map(
+      (label, month) => ({
+        label,
+        total: filteredSales
+          .filter(
+            (sale) =>
+              new Date(
+                sale.soldAt,
+              ).getMonth() === month,
+          )
+          .reduce(
+            (sum, sale) =>
+              sum + sale.total,
+            0,
+          ),
+      }),
+    )
+  }, [filteredSales, period])
+
+
+  // ------------------------------------
+  // Tarjetas resumen
   // ------------------------------------
 
   const totalSold =
-    currentData.reduce(
-      (accumulator, item) =>
-        accumulator + item.total,
+    filteredSales.reduce(
+      (sum, sale) =>
+        sum + sale.total,
       0,
     )
 
-  // Estos valores son mock por ahora.
-  // Luego se calcularán desde las ventas.
-  const totalSales = 58
-  const unitsSold = 112
+  const totalSales =
+    filteredSales.length
+
+  const unitsSold =
+    filteredSales.reduce(
+      (saleTotal, sale) =>
+        saleTotal +
+        sale.items.reduce(
+          (itemTotal, item) =>
+            itemTotal + item.quantity,
+          0,
+        ),
+      0,
+    )
 
   const averageSale =
     totalSales > 0
@@ -152,6 +328,87 @@ function Statistics() {
           totalSold / totalSales,
         )
       : 0
+
+
+  // ------------------------------------
+  // Productos más vendidos
+  // ------------------------------------
+
+  const topProducts = useMemo(() => {
+    const products =
+      new Map<string, number>()
+
+    filteredSales.forEach((sale) => {
+      sale.items.forEach((item) => {
+        products.set(
+          item.name,
+          (products.get(item.name) ?? 0) +
+            item.quantity,
+        )
+      })
+    })
+
+    return Array.from(
+      products.entries(),
+    )
+      .map(([name, units]) => ({
+        name,
+        units,
+      }))
+      .sort(
+        (a, b) =>
+          b.units - a.units,
+      )
+      .slice(0, 4)
+  }, [filteredSales])
+
+
+  // ------------------------------------
+  // Ventas por vendedor
+  // ------------------------------------
+
+  const sellerStats = useMemo(() => {
+    const sellers = new Map<
+      string,
+      {
+        name: string
+        sales: number
+        units: number
+        total: number
+      }
+    >()
+
+    filteredSales.forEach((sale) => {
+      const current =
+        sellers.get(sale.seller) ?? {
+          name: sale.seller,
+          sales: 0,
+          units: 0,
+          total: 0,
+        }
+
+      current.sales += 1
+      current.total += sale.total
+      current.units +=
+        sale.items.reduce(
+          (sum, item) =>
+            sum + item.quantity,
+          0,
+        )
+
+      sellers.set(
+        sale.seller,
+        current,
+      )
+    })
+
+    return Array.from(
+      sellers.values(),
+    ).sort(
+      (a, b) =>
+        b.total - a.total,
+    )
+  }, [filteredSales])
 
 
   // ------------------------------------
@@ -177,7 +434,6 @@ function Statistics() {
     month: 'Este mes',
     year: 'Este año',
   }[period]
-
 
   return (
     <section>
