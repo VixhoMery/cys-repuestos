@@ -1,67 +1,141 @@
 import { z } from 'zod'
 
+
+// ------------------------------------
+// Precio
+// Acepta string desde el formulario
+// o number desde API/backend.
+// El valor final siempre queda como number.
+// ------------------------------------
+
+const priceSchema = z
+  .union([
+    z.number(),
+
+    z
+      .string()
+      .trim()
+      .min(
+        1,
+        'El precio es obligatorio',
+      )
+      .regex(
+        /^\d+$/,
+        'El precio solo puede contener números',
+      ),
+  ])
+  .transform((value) =>
+    typeof value === 'number'
+      ? value
+      : Number(value),
+  )
+  .pipe(
+    z
+      .number()
+      .int(
+        'El precio solo puede contener números enteros',
+      )
+      .positive(
+        'El precio debe ser mayor a $0',
+      ),
+  )
+
+
 export const productBaseSchema = z.object({
   name: z
     .string()
     .trim()
-    .min(1, 'El nombre del producto es obligatorio')
-    .max(100, 'El nombre no puede superar los 100 caracteres'),
+    .min(
+      1,
+      'El nombre del producto es obligatorio',
+    )
+    .max(
+      100,
+      'El nombre no puede superar los 100 caracteres',
+    ),
 
   brand: z
     .string()
     .trim()
-    .min(1, 'La marca es obligatoria')
-    .max(60, 'La marca no puede superar los 60 caracteres'),
+    .min(
+      1,
+      'La marca es obligatoria',
+    )
+    .max(
+      60,
+      'La marca no puede superar los 60 caracteres',
+    ),
 
   sku: z
     .string()
     .trim()
-    .min(1, 'El SKU es obligatorio')
-    .max(50, 'El SKU no puede superar los 50 caracteres'),
+    .min(
+      1,
+      'El SKU es obligatorio',
+    )
+    .max(
+      50,
+      'El SKU no puede superar los 50 caracteres',
+    ),
 
   category: z
     .string()
     .trim()
-    .min(1, 'La categoría es obligatoria'),
+    .min(
+      1,
+      'La categoría es obligatoria',
+    ),
 
-  price: z.coerce
-    .number()
-    .positive('El precio debe ser mayor a $0'),
+  price: priceSchema,
 
   shortDescription: z
     .string()
     .trim()
-    .min(1, 'La descripción corta es obligatoria')
+    .min(
+      1,
+      'La descripción corta es obligatoria',
+    )
     .max(
-      120,
-      'La descripción corta no puede superar los 120 caracteres',
+      50,
+      'La descripción corta no puede superar los 50 caracteres',
     ),
 
   description: z
     .string()
     .trim()
-    .min(1, 'La descripción es obligatoria')
+    .min(
+      1,
+      'La descripción es obligatoria',
+    )
     .max(
-      1500,
-      'La descripción no puede superar los 1500 caracteres',
+      120,
+      'La descripción no puede superar los 120 caracteres',
     ),
 })
 
 
 // Crear producto
-export const createProductSchema = productBaseSchema
+export const createProductSchema =
+  productBaseSchema
 
 
 // Editar producto
-export const editProductSchema = productBaseSchema.extend({
-  stock: z.coerce
-    .number()
-    .int('El stock debe ser un número entero')
-    .min(0, 'El stock no puede ser negativo'),
-})
+export const editProductSchema =
+  productBaseSchema.extend({
+    stock: z.coerce
+      .number()
+      .int(
+        'El stock debe ser un número entero',
+      )
+      .min(
+        0,
+        'El stock no puede ser negativo',
+      ),
+  })
 
 
-// Tipos de TypeScript generados automáticamente desde Zod
+// Tipos de TypeScript generados
+// automáticamente desde Zod
 export type CreateProductInput =
   z.infer<typeof createProductSchema>
 

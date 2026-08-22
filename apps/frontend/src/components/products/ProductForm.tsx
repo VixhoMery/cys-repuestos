@@ -86,7 +86,13 @@ function ProductForm(props: ProductFormProps) {
   } = useForm<any>({
     resolver: zodResolver(schema),
     defaultValues: props.defaultValues,
+    mode: 'onBlur',
+    reValidateMode: 'onChange',
   })
+
+  const priceField =
+    register('price')
+
 
   const handleImages = (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -246,6 +252,7 @@ function ProductForm(props: ProductFormProps) {
 
   return (
     <form
+      autoComplete="off"
       onSubmit={handleSubmit(submitHandler)}
       className="
         mx-auto max-w-2xl
@@ -270,6 +277,7 @@ function ProductForm(props: ProductFormProps) {
           </label>
 
           <input
+              autoComplete="off"
             {...register('name')}
             type="text"
             className="
@@ -285,7 +293,7 @@ function ProductForm(props: ProductFormProps) {
           />
 
           {errors.name && (
-            <p className="mt-1 text-sm text-red-600">
+            <p className="mt-1 text-xs text-red-600">
               {String(errors.name.message)}
             </p>
           )}
@@ -299,6 +307,7 @@ function ProductForm(props: ProductFormProps) {
             </label>
 
             <input
+              autoComplete="off"
               {...register('brand')}
               type="text"
               className="
@@ -314,7 +323,7 @@ function ProductForm(props: ProductFormProps) {
             />
 
             {errors.brand && (
-              <p className="mt-1 text-sm text-red-600">
+              <p className="mt-1 text-xs text-red-600">
                 {String(errors.brand.message)}
               </p>
             )}
@@ -326,6 +335,7 @@ function ProductForm(props: ProductFormProps) {
             </label>
 
             <input
+              autoComplete="off"
               {...register('sku')}
               type="text"
               className="
@@ -341,7 +351,7 @@ function ProductForm(props: ProductFormProps) {
             />
 
             {errors.sku && (
-              <p className="mt-1 text-sm text-red-600">
+              <p className="mt-1 text-xs text-red-600">
                 {String(errors.sku.message)}
               </p>
             )}
@@ -356,6 +366,7 @@ function ProductForm(props: ProductFormProps) {
             </label>
 
             <input
+              autoComplete="off"
               {...register('category')}
               type="text"
               className="
@@ -371,7 +382,7 @@ function ProductForm(props: ProductFormProps) {
             />
 
             {errors.category && (
-              <p className="mt-1 text-sm text-red-600">
+              <p className="mt-1 text-xs text-red-600">
                 {String(errors.category.message)}
               </p>
             )}
@@ -383,9 +394,20 @@ function ProductForm(props: ProductFormProps) {
             </label>
 
             <input
-              {...register('price')}
-              type="number"
-              min="0"
+              autoComplete="off"
+              {...priceField}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              onChange={(event) => {
+                event.target.value =
+                  event.target.value.replace(
+                    /\D/g,
+                    '',
+                  )
+
+                priceField.onChange(event)
+              }}
               className="
                 w-full rounded-lg
                 border border-slate-300
@@ -399,7 +421,7 @@ function ProductForm(props: ProductFormProps) {
             />
 
             {errors.price && (
-              <p className="mt-1 text-sm text-red-600">
+              <p className="mt-1 text-xs text-red-600">
                 {String(errors.price.message)}
               </p>
             )}
@@ -413,6 +435,7 @@ function ProductForm(props: ProductFormProps) {
           </label>
 
           <textarea
+              autoComplete="off"
             {...register('shortDescription')}
             rows={2}
             placeholder="Texto breve que aparecerá en la tarjeta"
@@ -429,7 +452,7 @@ function ProductForm(props: ProductFormProps) {
           />
 
           {errors.shortDescription && (
-            <p className="mt-1 text-sm text-red-600">
+            <p className="mt-1 text-xs text-red-600">
               {String(
                 errors.shortDescription.message,
               )}
@@ -444,6 +467,7 @@ function ProductForm(props: ProductFormProps) {
           </label>
 
           <textarea
+              autoComplete="off"
             {...register('description')}
             rows={6}
             placeholder="Información detallada del producto"
@@ -460,7 +484,7 @@ function ProductForm(props: ProductFormProps) {
           />
 
           {errors.description && (
-            <p className="mt-1 text-sm text-red-600">
+            <p className="mt-1 text-xs text-red-600">
               {String(errors.description.message)}
             </p>
           )}
@@ -474,6 +498,7 @@ function ProductForm(props: ProductFormProps) {
             </label>
 
             <input
+              autoComplete="off"
               {...register('stock')}
               type="number"
               min="0"
@@ -490,7 +515,7 @@ function ProductForm(props: ProductFormProps) {
             />
 
             {errors.stock && (
-              <p className="mt-1 text-sm text-red-600">
+              <p className="mt-1 text-xs text-red-600">
                 {String(errors.stock.message)}
               </p>
             )}
@@ -541,6 +566,7 @@ function ProductForm(props: ProductFormProps) {
               </span>
 
               <input
+              autoComplete="off"
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 multiple
@@ -569,6 +595,7 @@ function ProductForm(props: ProductFormProps) {
                   />
 
                   <input
+              autoComplete="off"
                     type="url"
                     value={externalImageUrl}
                     onChange={(event) =>
