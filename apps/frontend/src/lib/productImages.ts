@@ -31,6 +31,67 @@ function getExtension(file: File) {
   return 'jpg'
 }
 
+type ErrorLike = {
+  message?: unknown
+  error?: unknown
+  statusCode?: unknown
+  name?: unknown
+}
+
+export function getProductImageErrorMessage(
+  error: unknown,
+) {
+  if (error instanceof Error) {
+    return error.message
+  }
+
+  if (error && typeof error === 'object') {
+    const candidate = error as ErrorLike
+
+    const message =
+      typeof candidate.message === 'string'
+        ? candidate.message
+        : typeof candidate.error === 'string'
+          ? candidate.error
+          : null
+
+    const statusCode =
+      typeof candidate.statusCode === 'string' ||
+      typeof candidate.statusCode === 'number'
+        ? String(candidate.statusCode)
+        : null
+
+    if (message && statusCode) {
+      return `${message} (código ${statusCode})`
+    }
+
+    if (message) return message
+  }
+
+  return 'Error desconocido al procesar la imagen.'
+}
+
+async function assertAuthenticatedForStorage() {
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession()
+
+  if (error) {
+    throw new Error(
+      `No fue posible comprobar la sesión de Supabase: ${getProductImageErrorMessage(error)}`,
+    )
+  }
+
+  if (!session) {
+    throw new Error(
+      'No hay una sesión autenticada de Supabase. Cierra sesión, vuelve a ingresar e intenta subir la imagen nuevamente.',
+    )
+  }
+
+  return session
+}
+
 export async function prepareProductImages(
   productId: number,
   images: ProductFormImage[],
@@ -61,10 +122,24 @@ export async function prepareProductImages(
         continue
       }
 
+      const session = await assertAuthenticatedForStorage()
       const extension = getExtension(image.file)
       const path = `products/${productId}/${crypto.randomUUID()}.${extension}`
 
-      const { error } = await supabase.storage
+      console.info('[product-images] Intentando subir archivo', {
+        bucket: BUCKET,
+        path,
+        fileName: image.file.name,
+        fileType: image.file.type,
+        fileSizeBytes: image.file.size,
+        fileSizeMB: Number((image.file.size / 1024 / 1024).toFixed(2)),
+        userId: session.user.id,
+      })
+
+      const {
+        data,
+        error,
+      } = await supabase.storage
         .from(BUCKET)
         .upload(path, image.file, {
           cacheControl: '3600',
@@ -72,7 +147,28 @@ export async function prepareProductImages(
           contentType: image.file.type,
         })
 
-      if (error) throw error
+      if (error) {
+        const detail = getProductImageErrorMessage(error)
+
+        console.error('[product-images] Supabase Storage rechazó el archivo', {
+          bucket: BUCKET,
+          path,
+          fileName: image.file.name,
+          fileType: image.file.type,
+          fileSizeBytes: image.file.size,
+          storageError: error,
+        })
+
+        throw new Error(
+          `No se pudo subir "${image.file.name}" a Supabase Storage: ${detail}`,
+        )
+      }
+
+      console.info('[product-images] Archivo subido correctamente', {
+        bucket: BUCKET,
+        requestedPath: path,
+        storageResponse: data,
+      })
 
       uploadedPaths.push(path)
       metadata.push({
@@ -85,10 +181,18 @@ export async function prepareProductImages(
     return { metadata, uploadedPaths }
   } catch (error) {
     if (uploadedPaths.length > 0) {
-      await supabase.storage
+      const { error: cleanupError } = await supabase.storage
         .from(BUCKET)
         .remove(uploadedPaths)
+
+      if (cleanupError) {
+        console.error(
+          '[product-images] También falló la limpieza de archivos parciales:',
+          cleanupError,
+        )
+      }
     }
+
     throw error
   }
 }
@@ -102,5 +206,15 @@ export async function removeStorageImages(
     .from(BUCKET)
     .remove(paths)
 
-  if (error) throw error
+  if (error) {
+    console.error('[product-images] Error eliminando archivos de Storage', {
+      bucket: BUCKET,
+      paths,
+      storageError: error,
+    })
+
+    throw new Error(
+      `No fue posible eliminar imágenes de Supabase Storage: ${getProductImageErrorMessage(error)}`,
+    )
+  }
 }

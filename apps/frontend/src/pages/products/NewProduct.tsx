@@ -13,6 +13,7 @@ import {
 } from "../../api/products";
 
 import {
+  getProductImageErrorMessage,
   prepareProductImages,
   removeStorageImages,
   type ProductFormImage,
@@ -64,8 +65,14 @@ function NewProduct() {
         }
       }
 
-      const message = error?.response?.data?.message;
-      setError(message || "No fue posible crear el producto.");
+      const backendMessage = error?.response?.data?.message;
+      const detailedMessage = getProductImageErrorMessage(error);
+
+      setError(
+        backendMessage ||
+          detailedMessage ||
+          "No fue posible crear el producto.",
+      );
     } finally {
       setSaving(false);
     }
