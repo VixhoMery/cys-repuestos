@@ -212,6 +212,19 @@ export async function replaceProductImages(
   try {
     await client.query('BEGIN')
 
+    // Bloquea este producto durante el reemplazo de imágenes.
+    // Evita que dos solicitudes simultáneas intenten insertar
+    // la misma posición (product_id, position).
+    await client.query(
+      `
+        SELECT id
+        FROM products
+        WHERE id = $1
+        FOR UPDATE
+      `,
+      [productId],
+    )
+
     await client.query(
       `
         DELETE FROM product_images

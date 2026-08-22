@@ -228,13 +228,19 @@ function ProductForm(props: ProductFormProps) {
     setImageError('')
   }
 
-  const submitHandler = (
+  const submitHandler = async (
     data: CreateProductInput | EditProductInput,
   ) => {
     if (props.mode === 'edit') {
-      props.onSubmit(data as EditProductInput, images)
+      await props.onSubmit(
+        data as EditProductInput,
+        images,
+      )
     } else {
-      props.onSubmit(data as CreateProductInput, images)
+      await props.onSubmit(
+        data as CreateProductInput,
+        images,
+      )
     }
   }
 
