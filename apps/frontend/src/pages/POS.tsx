@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   AlertTriangle,
   CheckCircle2,
@@ -8,43 +8,15 @@ import {
 
 import PosProductCard from '../components/pos/PosProductCard'
 import Cart from '../components/pos/Cart'
+import {
+  getProducts,
+  type Product,
+} from '../api/products'
 
+import {
+  createSale,
+} from '../api/sales'
 
-// ------------------------------------
-// Productos temporales
-// Después vendrán desde el backend
-// ------------------------------------
-
-const products = [
-  {
-    id: 1,
-    name: 'Alternador Toyota Yaris',
-    brand: 'Bosch',
-    price: 180000,
-    stock: 4,
-  },
-  {
-    id: 2,
-    name: 'Pastillas de freno',
-    brand: 'Brembo',
-    price: 45990,
-    stock: 12,
-  },
-  {
-    id: 3,
-    name: 'Filtro de aceite',
-    brand: 'Mann Filter',
-    price: 8990,
-    stock: 2,
-  },
-  {
-    id: 4,
-    name: 'Neumático 195/65 R15',
-    brand: 'Michelin',
-    price: 74990,
-    stock: 8,
-  },
-]
 
 
 // ------------------------------------
@@ -68,6 +40,9 @@ function POS() {
   const [search, setSearch] =
     useState('')
 
+  const [products, setProducts] =
+    useState<Product[]>([])
+
   const [cart, setCart] =
     useState<CartItem[]>([])
 
@@ -85,6 +60,27 @@ function POS() {
     saleCompleted,
     setSaleCompleted,
   ] = useState(false)
+
+
+  // ------------------------------------
+  // Cargar productos reales
+  // ------------------------------------
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const data = await getProducts()
+        setProducts(data)
+      } catch (error) {
+        console.error(
+          'Error cargando productos en POS:',
+          error,
+        )
+      }
+    }
+
+    loadProducts()
+  }, [])
 
 
   // ------------------------------------
@@ -284,18 +280,34 @@ function POS() {
     setShowFinishModal(false)
   }
 
-  const confirmFinishSale = () => {
-    // MÁS ADELANTE:
-    // aquí irá el POST /api/sales
+  const confirmFinishSale = async () => {
+    try {
+      await createSale({
+        items: cart.map((item) => ({
+          productId: item.id,
+          quantity: item.quantity,
+        })),
+      })
 
-    console.log('Venta registrada:', {
-      items: cart,
-      total,
-    })
+      // Volver a consultar productos para
+      // reflejar inmediatamente el stock real.
+      const updatedProducts =
+        await getProducts()
 
-    setCart([])
-    setShowFinishModal(false)
-    setSaleCompleted(true)
+      setProducts(updatedProducts)
+      setCart([])
+      setShowFinishModal(false)
+      setSaleCompleted(true)
+    } catch (error) {
+      console.error(
+        'Error registrando venta:',
+        error,
+      )
+
+      window.alert(
+        'No fue posible registrar la venta. Revisa el stock e inténtalo nuevamente.',
+      )
+    }
   }
 
 
@@ -409,6 +421,7 @@ function POS() {
                     brand={product.brand}
                     price={product.price}
                     stock={product.stock}
+                    image={product.image}
                     onAdd={addProduct}
                   />
                 ),

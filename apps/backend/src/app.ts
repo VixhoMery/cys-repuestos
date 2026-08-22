@@ -3,6 +3,7 @@ import cors from 'cors'
 
 import { pool } from './db/pool.js'
 import productsRoutes from './routes/products.routes.js'
+import salesRoutes from './routes/sales.routes.js'
 
 const app = express()
 
@@ -49,6 +50,16 @@ app.get(
 app.use(
   '/api/products',
   productsRoutes,
+)
+
+
+// ------------------------------------
+// Ventas
+// ------------------------------------
+
+app.use(
+  '/api/sales',
+  salesRoutes,
 )
 
 
