@@ -3,6 +3,7 @@ import {
   type Page,
 } from '@playwright/test'
 
+
 export function getTestCredentials() {
   const email =
     process.env.E2E_TEST_EMAIL
@@ -13,9 +14,11 @@ export function getTestCredentials() {
   if (!email || !password) {
     throw new Error(
       [
-        'Faltan las credenciales E2E.',
-        'Crea .env.e2e desde .env.e2e.example',
-        'y completa E2E_TEST_EMAIL / E2E_TEST_PASSWORD.',
+        'Faltan credenciales E2E.',
+        'Copia .env.e2e.example',
+        'como .env.e2e y completa',
+        'E2E_TEST_EMAIL y',
+        'E2E_TEST_PASSWORD.',
       ].join(' '),
     )
   }
@@ -25,6 +28,7 @@ export function getTestCredentials() {
     password,
   }
 }
+
 
 export async function login(
   page: Page,
@@ -41,7 +45,9 @@ export async function login(
     .fill(email)
 
   await page
-    .locator('input[type="password"]')
+    .locator(
+      'input[type="password"]',
+    )
     .fill(password)
 
   await page
@@ -60,4 +66,8 @@ export async function login(
       exact: true,
     }),
   ).toBeVisible()
+
+  return {
+    email,
+  }
 }

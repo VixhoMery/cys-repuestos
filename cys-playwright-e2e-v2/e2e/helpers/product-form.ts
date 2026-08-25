@@ -2,17 +2,20 @@ import type {
   Page,
 } from '@playwright/test'
 
+
 function fieldContainer(
   page: Page,
   label: string,
 ) {
   return page
-    .locator('label', {
+    .locator('label')
+    .filter({
       hasText: label,
     })
     .first()
     .locator('..')
 }
+
 
 export function inputByLabel(
   page: Page,
@@ -26,6 +29,7 @@ export function inputByLabel(
     .first()
 }
 
+
 export function textareaByLabel(
   page: Page,
   label: string,
@@ -35,5 +39,18 @@ export function textareaByLabel(
     label,
   )
     .locator('textarea')
+    .first()
+}
+
+
+export function selectByLabel(
+  page: Page,
+  label: string,
+) {
+  return fieldContainer(
+    page,
+    label,
+  )
+    .locator('select')
     .first()
 }

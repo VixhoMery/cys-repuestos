@@ -1,0 +1,5 @@
+# Agrega estas líneas a .gitignore si no están:
+
+playwright-report/
+test-results/
+blob-report/

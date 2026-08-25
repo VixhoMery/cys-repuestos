@@ -1,0 +1,148 @@
+C&S Repuestos - Playwright E2E V2
+======================================
+
+Esta versión reemplaza la primera suite de pruebas.
+
+Incluye pruebas para los cambios más recientes:
+
+1. AUTH + SIDEBAR
+   - ruta privada sin sesión
+   - login
+   - correo real en tarjeta de usuario
+   - logout
+
+2. PRODUCTO / VALIDACIONES
+   - campos obligatorios
+   - valor neto
+   - IVA 19% automático
+   - valor de venta
+   - precios solo con dígitos
+   - límites 50 / 120 caracteres
+
+3. CATEGORÍAS
+   - carga selector
+   - selecciona "Motor"
+   - intenta crear "Motor" otra vez
+   - backend debe responder que ya existe
+   - NO crea categorías basura
+
+4. CRUD PRODUCTO
+   - crear
+   - leer
+   - editar neto / IVA / venta / stock
+   - borrar
+   - limpieza defensiva ante fallo
+
+5. PAGINACIÓN
+   - página 1 = 1–25
+   - Siguiente = 26–50
+   - búsqueda server-side
+   - categoría server-side
+
+6. POS
+   - búsqueda
+   - agregar al carrito
+   - cambiar de página
+   - conservar carrito
+   - cancelar venta
+   - NO registra venta ni altera stock
+
+7. VENTAS + ESTADÍSTICAS
+   - Ventas muestra registros
+   - Estadísticas "Año" usa datos reales
+
+
+--------------------------------------
+INSTALAR
+--------------------------------------
+
+Desde la raíz del proyecto:
+
+pnpm add -D -w @playwright/test dotenv
+
+pnpm exec playwright install chromium
+
+
+--------------------------------------
+USUARIO E2E
+--------------------------------------
+
+En Supabase:
+Authentication -> Users -> Add user
+
+Recomendación:
+e2e@cys-repuestos.cl
+
+Usa una contraseña exclusiva de testing.
+
+
+--------------------------------------
+ENV
+--------------------------------------
+
+Copia:
+
+.env.e2e.example
+
+como:
+
+.env.e2e
+
+y completa:
+
+E2E_TEST_EMAIL=...
+E2E_TEST_PASSWORD=...
+
+
+--------------------------------------
+EJECUTAR
+--------------------------------------
+
+Toda la suite:
+
+pnpm exec playwright test
+
+Navegador visible:
+
+pnpm exec playwright test --headed
+
+Interfaz interactiva:
+
+pnpm exec playwright test --ui
+
+Solo una prueba:
+
+pnpm exec playwright test e2e/05-products-pagination.spec.ts
+
+Reporte:
+
+pnpm exec playwright show-report
+
+
+--------------------------------------
+DATOS NECESARIOS
+--------------------------------------
+
+Para las pruebas de paginación y POS se espera
+que todavía estén cargados los 50 productos:
+
+PAGTEST-...
+
+Si los borras antes, esas pruebas no podrán
+validar las páginas 1/2/3.
+
+Las pruebas de Ventas/Estadísticas esperan que
+haya al menos una venta histórica.
+
+
+--------------------------------------
+IMPORTANTE
+--------------------------------------
+
+- El CRUD crea un único producto E2E temporal
+  y lo elimina al terminar.
+- Categorías NO deja datos nuevos.
+- POS cancela la venta y NO la registra.
+- No se toca el diseño.
+- Por ahora se prueba Chromium.
+- Firefox/WebKit se pueden agregar después.
