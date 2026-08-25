@@ -9,6 +9,11 @@ import {
   corsMiddleware,
 } from './middleware/security.middleware.js'
 
+import {
+  globalErrorHandler,
+  notFoundHandler,
+} from './middleware/error.middleware.js'
+
 
 
 const app = express()
@@ -19,7 +24,11 @@ app.use(helmet())
 
 app.use(corsMiddleware)
 
-app.use(express.json())
+app.use(
+  express.json({
+    limit: '50kb',
+  }),
+)
 
 
 // ------------------------------------
@@ -73,5 +82,9 @@ app.use(
 )
 
 app.use(corsErrorHandler)
+
+app.use(notFoundHandler)
+
+app.use(globalErrorHandler)
 
 export default app
