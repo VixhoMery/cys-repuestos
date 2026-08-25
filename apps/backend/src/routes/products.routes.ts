@@ -9,7 +9,12 @@ import {
   showProduct,
 } from '../controllers/products.controller.js'
 
+import categoriesRoutes from './categories.routes.js'
+
 const router = Router()
+
+// Debe ir antes de /:id.
+router.use('/categories', categoriesRoutes)
 
 router.get('/', listProducts)
 router.get('/:id', showProduct)

@@ -100,6 +100,10 @@ export const productBaseSchema = z.object({
     .min(
       1,
       'La categoría es obligatoria',
+    )
+    .max(
+      60,
+      'La categoría no puede superar los 60 caracteres',
     ),
 
   netPrice: netPriceSchema,

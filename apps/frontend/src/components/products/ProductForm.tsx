@@ -5,7 +5,7 @@ import {
 } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { ImagePlus, Link, X } from 'lucide-react'
+import { ImagePlus, Link, Plus, X } from 'lucide-react'
 
 import {
   createProductSchema,
@@ -17,6 +17,12 @@ import {
 import type {
   ProductFormImage,
 } from '../../lib/productImages'
+
+import {
+  createCategory,
+  getCategories,
+  type Category,
+} from '../../api/categories'
 
 const MAX_IMAGES = 3
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024 // 5 MB
@@ -56,6 +62,21 @@ function ProductForm(props: ProductFormProps) {
   const [externalImageUrl, setExternalImageUrl] = useState('')
   const [imageError, setImageError] = useState('')
 
+  const [categories, setCategories] =
+    useState<Category[]>([])
+  const [categoriesLoading, setCategoriesLoading] =
+    useState(true)
+  const [categoryLoadError, setCategoryLoadError] =
+    useState('')
+  const [showCategoryModal, setShowCategoryModal] =
+    useState(false)
+  const [newCategoryName, setNewCategoryName] =
+    useState('')
+  const [addingCategory, setAddingCategory] =
+    useState(false)
+  const [addCategoryError, setAddCategoryError] =
+    useState('')
+
   const imagesRef = useRef(images)
 
   useEffect(() => {
@@ -80,6 +101,7 @@ function ProductForm(props: ProductFormProps) {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: {
       errors,
       isSubmitting,
@@ -90,6 +112,34 @@ function ProductForm(props: ProductFormProps) {
     mode: 'onBlur',
     reValidateMode: 'onChange',
   })
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setCategoriesLoading(true)
+        setCategoryLoadError('')
+        const data = await getCategories()
+        setCategories(data)
+
+        const initialCategory =
+          props.defaultValues?.category
+        if (initialCategory) {
+          setValue('category', initialCategory, {
+            shouldValidate: false,
+          })
+        }
+      } catch (error) {
+        console.error('Error cargando categorías:', error)
+        setCategoryLoadError(
+          'No fue posible cargar las categorías.',
+        )
+      } finally {
+        setCategoriesLoading(false)
+      }
+    }
+
+    loadCategories()
+  }, [props.defaultValues?.category, setValue])
 
   const netPriceField =
     register('netPrice')
@@ -113,6 +163,54 @@ function ProductForm(props: ProductFormProps) {
           netPriceNumber * 1.19,
         )
       : ''
+
+
+  const handleAddCategory = async () => {
+    const name = newCategoryName.trim()
+
+    if (!name) {
+      setAddCategoryError(
+        'Escribe un nombre para la categoría.',
+      )
+      return
+    }
+
+    if (name.length > 60) {
+      setAddCategoryError(
+        'La categoría no puede superar los 60 caracteres.',
+      )
+      return
+    }
+
+    try {
+      setAddingCategory(true)
+      setAddCategoryError('')
+
+      const category = await createCategory({ name })
+
+      setCategories((currentCategories) =>
+        [...currentCategories, category].sort((a, b) =>
+          a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }),
+        ),
+      )
+
+      setValue('category', category.name, {
+        shouldDirty: true,
+        shouldValidate: true,
+      })
+
+      setNewCategoryName('')
+      setShowCategoryModal(false)
+    } catch (error: any) {
+      console.error('Error creando categoría:', error)
+      setAddCategoryError(
+        error?.response?.data?.message ||
+          'No fue posible crear la categoría.',
+      )
+    } finally {
+      setAddingCategory(false)
+    }
+  }
 
 
   const handleImages = (
@@ -272,7 +370,8 @@ function ProductForm(props: ProductFormProps) {
   }
 
   return (
-    <form
+    <>
+      <form
       autoComplete="off"
       onSubmit={handleSubmit(submitHandler)}
       className="
@@ -382,25 +481,63 @@ function ProductForm(props: ProductFormProps) {
         {/* Categoría + Valor neto */}
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">
-              Categoría
-            </label>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <label className="block text-sm font-medium text-slate-700">
+                Categoría
+              </label>
 
-            <input
+              <button
+                type="button"
+                onClick={() => {
+                  setAddCategoryError('')
+                  setNewCategoryName('')
+                  setShowCategoryModal(true)
+                }}
+                className="
+                  inline-flex items-center gap-1
+                  text-xs font-medium text-blue-600
+                  transition hover:text-blue-700
+                "
+              >
+                <Plus size={15} />
+                Agregar categoría
+              </button>
+            </div>
+
+            <select
               autoComplete="off"
               {...register('category')}
-              type="text"
+              disabled={categoriesLoading}
               className="
                 w-full rounded-lg
                 border border-slate-300
-                px-4 py-3
-                outline-none
-                transition
+                bg-white px-4 py-3
+                outline-none transition
                 focus:border-blue-500
-                focus:ring-2
-                focus:ring-blue-100
+                focus:ring-2 focus:ring-blue-100
+                disabled:cursor-wait
+                disabled:bg-slate-50
+                disabled:text-slate-400
               "
-            />
+            >
+              <option value="">
+                {categoriesLoading
+                  ? 'Cargando categorías...'
+                  : 'Selecciona una categoría'}
+              </option>
+
+              {categories.map((category) => (
+                <option key={category.id} value={category.name}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+
+            {categoryLoadError && (
+              <p className="mt-1 text-xs text-red-600">
+                {categoryLoadError}
+              </p>
+            )}
 
             {errors.category && (
               <p className="mt-1 text-xs text-red-600">
@@ -826,6 +963,122 @@ function ProductForm(props: ProductFormProps) {
         </button>
       </div>
     </form>
+
+      {showCategoryModal && (
+        <div
+          className="
+            fixed inset-0 z-50
+            flex items-center justify-center
+            bg-slate-950/40 p-4
+          "
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setShowCategoryModal(false)
+            }
+          }}
+        >
+          <div
+            className="
+              w-full max-w-md rounded-2xl
+              border border-slate-200
+              bg-white p-6 shadow-xl
+            "
+          >
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900">
+                  Agregar categoría
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  La nueva categoría quedará disponible para todos los productos.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowCategoryModal(false)}
+                disabled={addingCategory}
+                className="
+                  rounded-lg p-2 text-slate-400
+                  transition hover:bg-slate-100 hover:text-slate-700
+                "
+                aria-label="Cerrar"
+              >
+                <X size={19} />
+              </button>
+            </div>
+
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Nombre de la categoría
+            </label>
+
+            <input
+              autoFocus
+              autoComplete="off"
+              type="text"
+              maxLength={60}
+              value={newCategoryName}
+              onChange={(event) => {
+                setNewCategoryName(event.target.value)
+                setAddCategoryError('')
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  void handleAddCategory()
+                }
+              }}
+              placeholder="Ej: Suspensión"
+              className="
+                w-full rounded-lg
+                border border-slate-300
+                px-4 py-3 outline-none transition
+                focus:border-blue-500
+                focus:ring-2 focus:ring-blue-100
+              "
+            />
+
+            {addCategoryError && (
+              <p className="mt-2 text-xs text-red-600">
+                {addCategoryError}
+              </p>
+            )}
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowCategoryModal(false)}
+                disabled={addingCategory}
+                className="
+                  rounded-lg border border-slate-300
+                  px-4 py-2.5 text-sm font-medium
+                  text-slate-700 transition hover:bg-slate-50
+                  disabled:opacity-60
+                "
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void handleAddCategory()}
+                disabled={addingCategory}
+                className="
+                  inline-flex items-center gap-2
+                  rounded-lg bg-blue-600
+                  px-4 py-2.5 text-sm font-medium text-white
+                  transition hover:bg-blue-700
+                  disabled:cursor-not-allowed disabled:opacity-60
+                "
+              >
+                <Plus size={17} />
+                {addingCategory ? 'Guardando...' : 'Agregar categoría'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
