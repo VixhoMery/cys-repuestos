@@ -43,14 +43,29 @@ export function textareaByLabel(
 }
 
 
+// Categoría tiene una estructura distinta:
+// <div>
+//   <div>
+//     <label>Categoría</label>
+//     <button>Agregar categoría</button>
+//   </div>
+//   <select>...</select>
+// </div>
+//
+// Por eso debemos subir dos niveles desde
+// el label antes de buscar el select.
 export function selectByLabel(
   page: Page,
   label: string,
 ) {
-  return fieldContainer(
-    page,
-    label,
-  )
+  return page
+    .locator('label')
+    .filter({
+      hasText: label,
+    })
+    .first()
+    .locator('..')
+    .locator('..')
     .locator('select')
     .first()
 }
