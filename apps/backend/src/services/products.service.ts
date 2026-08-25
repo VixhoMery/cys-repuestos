@@ -19,6 +19,8 @@ export async function getProducts() {
       p.brand,
       p.sku,
       p.category,
+      p.net_price AS "netPrice",
+      p.price_with_tax AS "priceWithTax",
       p.price,
       p.stock,
       p.short_description AS "shortDescription",
@@ -63,6 +65,7 @@ export async function createProduct(
         brand,
         sku,
         category,
+        net_price,
         price,
         short_description,
         description
@@ -74,7 +77,8 @@ export async function createProduct(
         $4,
         $5,
         $6,
-        $7
+        $7,
+        $8
       )
       RETURNING
         id::int AS id,
@@ -82,6 +86,8 @@ export async function createProduct(
         brand,
         sku,
         category,
+        net_price AS "netPrice",
+        price_with_tax AS "priceWithTax",
         price,
         stock,
         short_description AS "shortDescription",
@@ -94,6 +100,7 @@ export async function createProduct(
       product.brand,
       product.sku,
       product.category,
+      product.netPrice,
       product.price,
       product.shortDescription,
       product.description,
@@ -122,6 +129,8 @@ export async function getProductById(
         p.brand,
         p.sku,
         p.category,
+        p.net_price AS "netPrice",
+        p.price_with_tax AS "priceWithTax",
         p.price,
         p.stock,
         p.short_description AS "shortDescription",
@@ -170,12 +179,13 @@ export async function updateProduct(
         brand = $2,
         sku = $3,
         category = $4,
-        price = $5,
-        stock = $6,
-        short_description = $7,
-        description = $8,
+        net_price = $5,
+        price = $6,
+        stock = $7,
+        short_description = $8,
+        description = $9,
         updated_at = NOW()
-      WHERE id = $9
+      WHERE id = $10
       RETURNING id::int AS id
     `,
     [
@@ -183,6 +193,7 @@ export async function updateProduct(
       product.brand,
       product.sku,
       product.category,
+      product.netPrice,
       product.price,
       product.stock,
       product.shortDescription,

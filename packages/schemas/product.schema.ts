@@ -2,43 +2,59 @@ import { z } from 'zod'
 
 
 // ------------------------------------
-// Precio
+// Campo monetario
 // Acepta string desde el formulario
 // o number desde API/backend.
-// El valor final siempre queda como number.
+// El resultado final siempre es number.
 // ------------------------------------
 
-const priceSchema = z
-  .union([
-    z.number(),
+function moneySchema(
+  requiredMessage: string,
+  numbersMessage: string,
+  positiveMessage: string,
+) {
+  return z
+    .union([
+      z.number(),
 
-    z
-      .string()
-      .trim()
-      .min(
-        1,
-        'El precio es obligatorio',
-      )
-      .regex(
-        /^\d+$/,
-        'El precio solo puede contener números',
-      ),
-  ])
-  .transform((value) =>
-    typeof value === 'number'
-      ? value
-      : Number(value),
-  )
-  .pipe(
-    z
-      .number()
-      .int(
-        'El precio solo puede contener números enteros',
-      )
-      .positive(
-        'El precio debe ser mayor a $0',
-      ),
-  )
+      z
+        .string()
+        .trim()
+        .min(
+          1,
+          requiredMessage,
+        )
+        .regex(
+          /^\d+$/,
+          numbersMessage,
+        ),
+    ])
+    .transform((value) =>
+      typeof value === 'number'
+        ? value
+        : Number(value),
+    )
+    .pipe(
+      z
+        .number()
+        .int(numbersMessage)
+        .positive(positiveMessage),
+    )
+}
+
+
+const netPriceSchema = moneySchema(
+  'El valor neto es obligatorio',
+  'El valor neto solo puede contener números',
+  'El valor neto debe ser mayor a $0',
+)
+
+
+const salePriceSchema = moneySchema(
+  'El valor de venta es obligatorio',
+  'El valor de venta solo puede contener números',
+  'El valor de venta debe ser mayor a $0',
+)
 
 
 export const productBaseSchema = z.object({
@@ -86,7 +102,11 @@ export const productBaseSchema = z.object({
       'La categoría es obligatoria',
     ),
 
-  price: priceSchema,
+  netPrice: netPriceSchema,
+
+  // price se mantiene como valor de venta
+  // para no romper POS, ventas ni estadísticas.
+  price: salePriceSchema,
 
   shortDescription: z
     .string()
@@ -114,12 +134,10 @@ export const productBaseSchema = z.object({
 })
 
 
-// Crear producto
 export const createProductSchema =
   productBaseSchema
 
 
-// Editar producto
 export const editProductSchema =
   productBaseSchema.extend({
     stock: z.coerce
@@ -134,8 +152,6 @@ export const editProductSchema =
   })
 
 
-// Tipos de TypeScript generados
-// automáticamente desde Zod
 export type CreateProductInput =
   z.infer<typeof createProductSchema>
 

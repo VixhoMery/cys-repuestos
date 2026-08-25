@@ -139,6 +139,7 @@ function EditProduct() {
         brand: product.brand,
         sku: product.sku,
         category: product.category,
+        netPrice: product.netPrice,
         price: product.price,
         stock: product.stock,
         shortDescription: product.shortDescription,

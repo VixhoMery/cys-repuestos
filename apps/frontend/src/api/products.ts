@@ -21,6 +21,8 @@ export type Product = {
   brand: string
   sku: string
   category: string
+  netPrice: number
+  priceWithTax: number
   price: number
   stock: number
   shortDescription: string

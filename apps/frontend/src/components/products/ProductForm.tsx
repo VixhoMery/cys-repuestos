@@ -79,6 +79,7 @@ function ProductForm(props: ProductFormProps) {
   const {
     register,
     handleSubmit,
+    watch,
     formState: {
       errors,
       isSubmitting,
@@ -90,8 +91,28 @@ function ProductForm(props: ProductFormProps) {
     reValidateMode: 'onChange',
   })
 
+  const netPriceField =
+    register('netPrice')
+
   const priceField =
     register('price')
+
+  const netPriceValue =
+    watch('netPrice')
+
+  const normalizedNetPrice =
+    String(netPriceValue ?? '')
+      .replace(/\D/g, '')
+
+  const netPriceNumber =
+    Number(normalizedNetPrice)
+
+  const priceWithTax =
+    netPriceNumber > 0
+      ? Math.round(
+          netPriceNumber * 1.19,
+        )
+      : ''
 
 
   const handleImages = (
@@ -358,7 +379,7 @@ function ProductForm(props: ProductFormProps) {
           </div>
         </div>
 
-        {/* Categoría + Precio */}
+        {/* Categoría + Valor neto */}
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-700">
@@ -390,7 +411,75 @@ function ProductForm(props: ProductFormProps) {
 
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-700">
-              Precio
+              Valor neto
+            </label>
+
+            <input
+              autoComplete="off"
+              {...netPriceField}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              onChange={(event) => {
+                event.target.value =
+                  event.target.value.replace(
+                    /\D/g,
+                    '',
+                  )
+
+                netPriceField.onChange(event)
+              }}
+              className="
+                w-full rounded-lg
+                border border-slate-300
+                px-4 py-3
+                outline-none
+                transition
+                focus:border-blue-500
+                focus:ring-2
+                focus:ring-blue-100
+              "
+            />
+
+            {errors.netPrice && (
+              <p className="mt-1 text-xs text-red-600">
+                {String(errors.netPrice.message)}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Valor con IVA + Valor de venta */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Valor con IVA (19%)
+            </label>
+
+            <input
+              autoComplete="off"
+              type="text"
+              inputMode="numeric"
+              value={priceWithTax}
+              readOnly
+              className="
+                w-full rounded-lg
+                border border-slate-300
+                bg-slate-50
+                px-4 py-3
+                text-slate-600
+                outline-none
+              "
+            />
+
+            <p className="mt-1 text-xs text-slate-500">
+              Calculado automáticamente desde el valor neto.
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Valor de venta
             </label>
 
             <input
