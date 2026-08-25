@@ -20,16 +20,67 @@ import {
 
 
 export async function listProducts(
-  _req: Request,
+  req: Request,
   res: Response,
 ) {
   try {
-    const products = await getProducts()
-    return res.json(products)
+    const page =
+      Number(req.query.page ?? 1)
+
+    const limit =
+      Number(req.query.limit ?? 25)
+
+    if (
+      !Number.isInteger(page) ||
+      page < 1
+    ) {
+      return res.status(400).json({
+        message:
+          'La página no es válida',
+      })
+    }
+
+    if (
+      !Number.isInteger(limit) ||
+      limit < 1 ||
+      limit > 100
+    ) {
+      return res.status(400).json({
+        message:
+          'El límite debe estar entre 1 y 100',
+      })
+    }
+
+    const search =
+      typeof req.query.search ===
+      'string'
+        ? req.query.search
+        : undefined
+
+    const category =
+      typeof req.query.category ===
+      'string'
+        ? req.query.category
+        : undefined
+
+    const result =
+      await getProducts({
+        page,
+        limit,
+        search,
+        category,
+      })
+
+    return res.json(result)
   } catch (error) {
-    console.error('Error obteniendo productos:', error)
+    console.error(
+      'Error obteniendo productos:',
+      error,
+    )
+
     return res.status(500).json({
-      message: 'Error al obtener los productos',
+      message:
+        'Error al obtener los productos',
     })
   }
 }

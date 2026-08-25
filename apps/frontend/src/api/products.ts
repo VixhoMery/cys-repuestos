@@ -69,9 +69,59 @@ function normalizeProduct(product: ApiProduct): Product {
   }
 }
 
-export async function getProducts() {
-  const response = await api.get<ApiProduct[]>('/products')
-  return response.data.map(normalizeProduct)
+export type ProductPagination = {
+  page: number
+  limit: number
+  total: number
+  totalPages: number
+  hasPreviousPage: boolean
+  hasNextPage: boolean
+}
+
+export type ProductListResponse = {
+  data: Product[]
+  pagination: ProductPagination
+}
+
+export type GetProductsParams = {
+  page?: number
+  limit?: number
+  search?: string
+  category?: string
+}
+
+type ApiProductListResponse = {
+  data: ApiProduct[]
+  pagination: ProductPagination
+}
+
+export async function getProducts(
+  params: GetProductsParams = {},
+): Promise<ProductListResponse> {
+  const response =
+    await api.get<ApiProductListResponse>(
+      '/products',
+      {
+        params: {
+          page: params.page ?? 1,
+          limit: params.limit ?? 25,
+          search:
+            params.search?.trim() ||
+            undefined,
+          category:
+            params.category?.trim() ||
+            undefined,
+        },
+      },
+    )
+
+  return {
+    data: response.data.data.map(
+      normalizeProduct,
+    ),
+    pagination:
+      response.data.pagination,
+  }
 }
 
 export async function getProductById(id: number) {

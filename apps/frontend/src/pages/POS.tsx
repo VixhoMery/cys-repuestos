@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  LoaderCircle,
   Search,
   X,
 } from 'lucide-react'
@@ -43,6 +46,25 @@ function POS() {
   const [products, setProducts] =
     useState<Product[]>([])
 
+  const [page, setPage] =
+    useState(1)
+
+  const [debouncedSearch, setDebouncedSearch] =
+    useState('')
+
+  const [productsLoading, setProductsLoading] =
+    useState(true)
+
+  const [pagination, setPagination] =
+    useState({
+      page: 1,
+      limit: 25,
+      total: 0,
+      totalPages: 1,
+      hasPreviousPage: false,
+      hasNextPage: false,
+    })
+
   const [cart, setCart] =
     useState<CartItem[]>([])
 
@@ -63,44 +85,59 @@ function POS() {
 
 
   // ------------------------------------
-  // Cargar productos reales
+  // Esperar brevemente al escribir
+  // ------------------------------------
+
+  useEffect(() => {
+    const timeout =
+      window.setTimeout(() => {
+        setDebouncedSearch(
+          search.trim(),
+        )
+      }, 350)
+
+    return () =>
+      window.clearTimeout(timeout)
+  }, [search])
+
+
+  // ------------------------------------
+  // Cargar 25 productos por página
   // ------------------------------------
 
   useEffect(() => {
     const loadProducts = async () => {
       try {
-        const data = await getProducts()
-        setProducts(data)
+        setProductsLoading(true)
+
+        const result =
+          await getProducts({
+            page,
+            limit: 25,
+            search:
+              debouncedSearch ||
+              undefined,
+          })
+
+        setProducts(result.data)
+        setPagination(
+          result.pagination,
+        )
       } catch (error) {
         console.error(
           'Error cargando productos en POS:',
           error,
         )
+      } finally {
+        setProductsLoading(false)
       }
     }
 
     loadProducts()
-  }, [])
-
-
-  // ------------------------------------
-  // Buscar productos
-  // ------------------------------------
-
-  const filteredProducts =
-    products.filter((product) => {
-      const query =
-        search.toLowerCase()
-
-      return (
-        product.name
-          .toLowerCase()
-          .includes(query) ||
-        product.brand
-          .toLowerCase()
-          .includes(query)
-      )
-    })
+  }, [
+    page,
+    debouncedSearch,
+  ])
 
 
   // ------------------------------------
@@ -292,9 +329,21 @@ function POS() {
       // Volver a consultar productos para
       // reflejar inmediatamente el stock real.
       const updatedProducts =
-        await getProducts()
+        await getProducts({
+          page,
+          limit: 25,
+          search:
+            debouncedSearch ||
+            undefined,
+        })
 
-      setProducts(updatedProducts)
+      setProducts(
+        updatedProducts.data,
+      )
+
+      setPagination(
+        updatedProducts.pagination,
+      )
       setCart([])
       setShowFinishModal(false)
       setSaleCompleted(true)
@@ -381,11 +430,12 @@ function POS() {
             <input
               type="search"
               value={search}
-              onChange={(event) =>
+              onChange={(event) => {
                 setSearch(
                   event.target.value,
                 )
-              }
+                setPage(1)
+              }}
               placeholder="Buscar producto..."
               className="
                 w-full rounded-xl
@@ -411,8 +461,34 @@ function POS() {
               2xl:grid-cols-4
             "
           >
-            {filteredProducts.length > 0 ? (
-              filteredProducts.map(
+            {productsLoading ? (
+              <div
+                className="
+                  col-span-full
+                  flex min-h-48
+                  items-center
+                  justify-center
+                  rounded-xl
+                  border border-slate-200
+                  bg-white
+                "
+              >
+                <div className="text-center">
+                  <LoaderCircle
+                    size={28}
+                    className="
+                      mx-auto
+                      animate-spin
+                      text-blue-600
+                    "
+                  />
+                  <p className="mt-3 text-sm text-slate-500">
+                    Cargando productos...
+                  </p>
+                </div>
+              </div>
+            ) : products.length > 0 ? (
+              products.map(
                 (product) => (
                   <PosProductCard
                     key={product.id}
@@ -443,6 +519,116 @@ function POS() {
               </div>
             )}
           </div>
+
+          {!productsLoading &&
+            pagination.total > 0 && (
+              <div
+                className="
+                  mt-6
+                  flex flex-col
+                  items-center
+                  justify-between
+                  gap-3
+                  rounded-xl
+                  border border-slate-200
+                  bg-white
+                  px-4 py-3
+                  sm:flex-row
+                "
+              >
+                <p className="text-sm text-slate-500">
+                  {(pagination.page - 1) *
+                    pagination.limit +
+                    1}
+                  –
+                  {Math.min(
+                    pagination.page *
+                      pagination.limit,
+                    pagination.total,
+                  )}{' '}
+                  de{' '}
+                  {pagination.total}
+                </p>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPage(
+                        (currentPage) =>
+                          Math.max(
+                            1,
+                            currentPage -
+                              1,
+                          ),
+                      )
+                    }
+                    disabled={
+                      !pagination.hasPreviousPage
+                    }
+                    className="
+                      inline-flex
+                      items-center
+                      gap-1
+                      rounded-lg
+                      border border-slate-200
+                      px-3 py-2
+                      text-sm font-medium
+                      text-slate-700
+                      transition
+                      hover:bg-slate-50
+                      disabled:cursor-not-allowed
+                      disabled:opacity-40
+                    "
+                  >
+                    <ChevronLeft
+                      size={16}
+                    />
+                    Anterior
+                  </button>
+
+                  <span className="text-sm font-medium text-slate-600">
+                    {pagination.page}/
+                    {
+                      pagination.totalPages
+                    }
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPage(
+                        (currentPage) =>
+                          currentPage +
+                          1,
+                      )
+                    }
+                    disabled={
+                      !pagination.hasNextPage
+                    }
+                    className="
+                      inline-flex
+                      items-center
+                      gap-1
+                      rounded-lg
+                      border border-slate-200
+                      px-3 py-2
+                      text-sm font-medium
+                      text-slate-700
+                      transition
+                      hover:bg-slate-50
+                      disabled:cursor-not-allowed
+                      disabled:opacity-40
+                    "
+                  >
+                    Siguiente
+                    <ChevronRight
+                      size={16}
+                    />
+                  </button>
+                </div>
+              </div>
+            )}
         </div>
 
 

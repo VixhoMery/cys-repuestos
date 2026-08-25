@@ -1,12 +1,13 @@
 import {
   useEffect,
-  useMemo,
   useState,
 } from 'react'
 
 import {
   AlertCircle,
   AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
   LoaderCircle,
   Plus,
   Search,
@@ -44,6 +45,22 @@ function Products() {
   const [error, setError] =
     useState('')
 
+  const [page, setPage] =
+    useState(1)
+
+  const [pagination, setPagination] =
+    useState({
+      page: 1,
+      limit: 25,
+      total: 0,
+      totalPages: 1,
+      hasPreviousPage: false,
+      hasNextPage: false,
+    })
+
+  const [reloadKey, setReloadKey] =
+    useState(0)
+
 
   // ------------------------------------
   // Filtros
@@ -56,6 +73,11 @@ function Products() {
     selectedCategory,
     setSelectedCategory,
   ] = useState('Todos')
+
+  const [
+    debouncedSearch,
+    setDebouncedSearch,
+  ] = useState('')
 
 
   // ------------------------------------
@@ -78,7 +100,24 @@ function Products() {
 
 
   // ------------------------------------
-  // Cargar productos desde backend
+  // Esperar brevemente al escribir
+  // ------------------------------------
+
+  useEffect(() => {
+    const timeout =
+      window.setTimeout(() => {
+        setDebouncedSearch(
+          search.trim(),
+        )
+      }, 350)
+
+    return () =>
+      window.clearTimeout(timeout)
+  }, [search])
+
+
+  // ------------------------------------
+  // Cargar solo 25 productos
   // ------------------------------------
 
   useEffect(() => {
@@ -87,15 +126,30 @@ function Products() {
         setLoading(true)
         setError('')
 
-        const data =
-          await getProducts()
+        const result =
+          await getProducts({
+            page,
+            limit: 25,
+            search:
+              debouncedSearch ||
+              undefined,
+            category:
+              selectedCategory ===
+              'Todos'
+                ? undefined
+                : selectedCategory,
+          })
 
-        setProducts(data)
+        setProducts(result.data)
+        setPagination(
+          result.pagination,
+        )
       } catch (error) {
         console.error(
           'Error cargando productos:',
           error,
         )
+
         setError(
           'No fue posible cargar los productos.',
         )
@@ -105,47 +159,12 @@ function Products() {
     }
 
     loadProducts()
-  }, [])
-
-
-  // ------------------------------------
-  // Filtrar productos
-  // ------------------------------------
-
-  const filteredProducts =
-    useMemo(() => {
-      const query =
-        search.trim().toLowerCase()
-      return products.filter(
-        (product) => {
-          const matchesCategory =
-            selectedCategory ===
-              'Todos' ||
-            product.category ===
-              selectedCategory
-          const matchesSearch =
-            query === '' ||
-            product.name
-              .toLowerCase()
-              .includes(query) ||
-            product.brand
-              .toLowerCase()
-              .includes(query) ||
-            product.sku
-              .toLowerCase()
-              .includes(query)
-
-          return (
-            matchesCategory &&
-            matchesSearch
-          )
-        },
-      )
-    }, [
-      products,
-      search,
-      selectedCategory,
-    ])
+  }, [
+    page,
+    debouncedSearch,
+    selectedCategory,
+    reloadKey,
+  ])
 
 
   // ------------------------------------
@@ -220,16 +239,25 @@ function Products() {
           }
         }
 
-        setProducts(
-          (currentProducts) =>
-            currentProducts.filter(
-              (product) =>
-                product.id !==
-                productToDelete.id,
-            ),
-        )
+        const wasLastProductOnPage =
+          products.length === 1
 
         setProductToDelete(null)
+
+        if (
+          wasLastProductOnPage &&
+          page > 1
+        ) {
+          setPage(
+            (currentPage) =>
+              currentPage - 1,
+          )
+        } else {
+          setReloadKey(
+            (currentKey) =>
+              currentKey + 1,
+          )
+        }
       } catch (error) {
         console.error(
           'Error eliminando producto:',
@@ -314,11 +342,12 @@ function Products() {
         <input
           type="search"
           value={search}
-          onChange={(event) =>
+          onChange={(event) => {
             setSearch(
               event.target.value,
             )
-          }
+            setPage(1)
+          }}
           placeholder="Buscar por nombre, marca o SKU..."
           className="
             w-full
@@ -348,9 +377,14 @@ function Products() {
           selectedCategory={
             selectedCategory
           }
-          onSelectCategory={
-            setSelectedCategory
-          }
+          onSelectCategory={(
+            category,
+          ) => {
+            setSelectedCategory(
+              category,
+            )
+            setPage(1)
+          }}
         />
 
 
@@ -421,7 +455,7 @@ function Products() {
           {/* Productos */}
           {!loading &&
             !error &&
-            filteredProducts.length >
+            products.length >
               0 && (
               <div
                 className="
@@ -432,7 +466,7 @@ function Products() {
                   xl:grid-cols-5
                 "
               >
-                {filteredProducts.map(
+                {products.map(
                   (product) => (
                     <ProductCard
                       key={product.id}
@@ -467,7 +501,7 @@ function Products() {
           {/* Sin resultados */}
           {!loading &&
             !error &&
-            filteredProducts.length ===
+            products.length ===
               0 && (
               <div
                 className="
@@ -492,6 +526,132 @@ function Products() {
                     Prueba cambiando la
                     búsqueda o la categoría.
                   </p>
+                </div>
+              </div>
+            )}
+
+          {/* Paginación */}
+          {!loading &&
+            !error &&
+            pagination.total > 0 && (
+              <div
+                className="
+                  mt-7
+                  flex flex-col
+                  items-center
+                  justify-between
+                  gap-4
+                  rounded-xl
+                  border border-slate-200
+                  bg-white
+                  px-4 py-3
+                  sm:flex-row
+                "
+              >
+                <p className="text-sm text-slate-500">
+                  Mostrando{' '}
+                  {(pagination.page - 1) *
+                    pagination.limit +
+                    1}
+                  –
+                  {Math.min(
+                    pagination.page *
+                      pagination.limit,
+                    pagination.total,
+                  )}{' '}
+                  de{' '}
+                  {pagination.total}{' '}
+                  productos
+                </p>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPage(
+                        (currentPage) =>
+                          Math.max(
+                            1,
+                            currentPage -
+                              1,
+                          ),
+                      )
+                    }
+                    disabled={
+                      !pagination.hasPreviousPage
+                    }
+                    className="
+                      inline-flex
+                      items-center
+                      gap-1
+                      rounded-lg
+                      border border-slate-200
+                      bg-white
+                      px-3 py-2
+                      text-sm font-medium
+                      text-slate-700
+                      transition
+                      hover:bg-slate-50
+                      disabled:cursor-not-allowed
+                      disabled:opacity-40
+                    "
+                  >
+                    <ChevronLeft
+                      size={17}
+                    />
+                    Anterior
+                  </button>
+
+                  <span
+                    className="
+                      min-w-28
+                      text-center
+                      text-sm
+                      font-medium
+                      text-slate-600
+                    "
+                  >
+                    Página{' '}
+                    {pagination.page}{' '}
+                    de{' '}
+                    {
+                      pagination.totalPages
+                    }
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPage(
+                        (currentPage) =>
+                          currentPage +
+                          1,
+                      )
+                    }
+                    disabled={
+                      !pagination.hasNextPage
+                    }
+                    className="
+                      inline-flex
+                      items-center
+                      gap-1
+                      rounded-lg
+                      border border-slate-200
+                      bg-white
+                      px-3 py-2
+                      text-sm font-medium
+                      text-slate-700
+                      transition
+                      hover:bg-slate-50
+                      disabled:cursor-not-allowed
+                      disabled:opacity-40
+                    "
+                  >
+                    Siguiente
+                    <ChevronRight
+                      size={17}
+                    />
+                  </button>
                 </div>
               </div>
             )}
