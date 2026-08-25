@@ -1,13 +1,23 @@
 import express from 'express'
-import cors from 'cors'
-
 import { pool } from './db/pool.js'
 import productsRoutes from './routes/products.routes.js'
 import salesRoutes from './routes/sales.routes.js'
+import helmet from 'helmet'
+
+import {
+  corsErrorHandler,
+  corsMiddleware,
+} from './middleware/security.middleware.js'
+
+
 
 const app = express()
 
-app.use(cors())
+app.disable('x-powered-by')
+
+app.use(helmet())
+
+app.use(corsMiddleware)
 
 app.use(express.json())
 
@@ -62,5 +72,6 @@ app.use(
   salesRoutes,
 )
 
+app.use(corsErrorHandler)
 
 export default app
