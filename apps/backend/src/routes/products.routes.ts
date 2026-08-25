@@ -13,6 +13,11 @@ import {
   requireAuth,
 } from '../middleware/auth.middleware.js'
 
+import {
+  writeRateLimiter,
+} from '../middleware/rate-limit.middleware.js'
+
+
 import categoriesRoutes from './categories.routes.js'
 
 
@@ -52,21 +57,25 @@ router.get(
 
 router.post(
   '/',
+  writeRateLimiter,
   addProduct,
 )
 
 router.patch(
   '/:id',
+  writeRateLimiter,
   editProduct,
 )
 
 router.put(
   '/:id/images',
+  writeRateLimiter,
   saveProductImages,
 )
 
 router.delete(
   '/:id',
+  writeRateLimiter,
   removeProduct,
 )
 

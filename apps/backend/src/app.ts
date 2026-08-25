@@ -14,7 +14,9 @@ import {
   notFoundHandler,
 } from './middleware/error.middleware.js'
 
-
+import {
+  apiRateLimiter,
+} from './middleware/rate-limit.middleware.js'
 
 const app = express()
 
@@ -61,6 +63,10 @@ app.get(
   },
 )
 
+app.use(
+  '/api',
+  apiRateLimiter,
+)
 
 // ------------------------------------
 // Productos
