@@ -10,6 +10,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  UserRound,
 } from "lucide-react";
 
 import { useAuth } from "../../context/AuthContext";
@@ -17,8 +18,36 @@ import { useAuth } from "../../context/AuthContext";
 function Sidebar() {
   const [isOpen, setIsOpen] = useState(true);
 
-  const { logout } = useAuth();
+  const { logout, user, profile } = useAuth();
   const navigate = useNavigate();
+
+  const email = user?.email ?? "";
+
+  const metadataName =
+    typeof user?.user_metadata?.full_name === "string"
+      ? user.user_metadata.full_name.trim()
+      : typeof user?.user_metadata?.name === "string"
+        ? user.user_metadata.name.trim()
+        : "";
+
+  const emailName = email
+    ? email
+        .split("@")[0]
+        .replace(/[._-]+/g, " ")
+        .replace(/\b\w/g, (letter) => letter.toUpperCase())
+    : "Usuario";
+
+  const displayName =
+    profile?.full_name?.trim() ||
+    metadataName ||
+    emailName;
+
+  const initials = displayName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
 
   const handleLogout = async () => {
     await logout();
@@ -189,27 +218,110 @@ function Sidebar() {
         })}
       </nav>
 
-      {/* Logout */}
-      <div className="border-t border-slate-700 p-4">
-        <button
-          type="button"
-          onClick={handleLogout}
-          title={!isOpen ? "Cerrar sesión" : undefined}
-          className={`
-            flex w-full items-center gap-3
-            rounded-lg px-4 py-3
-            text-slate-300
-            transition-colors duration-200
-            hover:bg-red-500/10
-            hover:text-red-400
+      {/* Usuario + Logout */}
+      <div className="border-t border-slate-700 p-3">
+        {isOpen ? (
+          <div
+            className="
+              flex items-center gap-3
+              rounded-xl
+              border border-slate-700
+              bg-slate-800/70
+              p-3
+            "
+          >
+            <div
+              className="
+                flex h-10 w-10
+                shrink-0
+                items-center justify-center
+                rounded-full
+                bg-blue-600
+                text-sm font-semibold
+                text-white
+              "
+              aria-hidden="true"
+            >
+              {initials || <UserRound size={19} />}
+            </div>
 
-            ${!isOpen ? "justify-center" : ""}
-          `}
-        >
-          <LogOut size={22} className="shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p
+                className="
+                  truncate
+                  text-sm font-semibold
+                  text-white
+                "
+                title={displayName}
+              >
+                {displayName}
+              </p>
 
-          {isOpen && <span className="whitespace-nowrap">Cerrar sesión</span>}
-        </button>
+              <p
+                className="
+                  mt-0.5 truncate
+                  text-xs text-slate-400
+                "
+                title={email}
+              >
+                {email}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              title="Cerrar sesión"
+              aria-label="Cerrar sesión"
+              className="
+                flex h-9 w-9
+                shrink-0
+                items-center justify-center
+                rounded-lg
+                text-slate-400
+                transition-colors duration-200
+                hover:bg-red-500/10
+                hover:text-red-400
+              "
+            >
+              <LogOut size={19} />
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-2">
+            <div
+              className="
+                flex h-10 w-10
+                items-center justify-center
+                rounded-full
+                bg-blue-600
+                text-xs font-semibold
+                text-white
+              "
+              title={`${displayName}${email ? ` · ${email}` : ""}`}
+            >
+              {initials || <UserRound size={18} />}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              title="Cerrar sesión"
+              aria-label="Cerrar sesión"
+              className="
+                flex h-10 w-10
+                items-center justify-center
+                rounded-lg
+                text-slate-400
+                transition-colors duration-200
+                hover:bg-red-500/10
+                hover:text-red-400
+              "
+            >
+              <LogOut size={20} />
+            </button>
+          </div>
+        )}
       </div>
     </aside>
   );
