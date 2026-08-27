@@ -5,7 +5,7 @@ import {
 } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { ImagePlus, Link, Plus, X } from 'lucide-react'
+import { ImagePlus, Link, Plus, Trash2, X } from 'lucide-react'
 
 import {
   createProductSchema,
@@ -20,6 +20,7 @@ import type {
 
 import {
   createCategory,
+  deleteCategory,
   getCategories,
   type Category,
 } from '../../api/categories'
@@ -75,6 +76,12 @@ function ProductForm(props: ProductFormProps) {
   const [addingCategory, setAddingCategory] =
     useState(false)
   const [addCategoryError, setAddCategoryError] =
+    useState('')
+  const [categoryToDelete, setCategoryToDelete] =
+    useState<Category | null>(null)
+  const [deletingCategory, setDeletingCategory] =
+    useState(false)
+  const [deleteCategoryError, setDeleteCategoryError] =
     useState('')
 
   const imagesRef = useRef(images)
@@ -150,6 +157,9 @@ function ProductForm(props: ProductFormProps) {
   const netPriceValue =
     watch('netPrice')
 
+  const selectedCategoryValue =
+    watch('category')
+
   const normalizedNetPrice =
     String(netPriceValue ?? '')
       .replace(/\D/g, '')
@@ -211,6 +221,61 @@ function ProductForm(props: ProductFormProps) {
       setAddingCategory(false)
     }
   }
+
+
+  const handleDeleteCategory =
+    async () => {
+      if (!categoryToDelete) {
+        return
+      }
+
+      try {
+        setDeletingCategory(true)
+        setDeleteCategoryError('')
+
+        await deleteCategory(
+          categoryToDelete.id,
+        )
+
+        setCategories(
+          (currentCategories) =>
+            currentCategories.filter(
+              (category) =>
+                category.id !==
+                categoryToDelete.id,
+            ),
+        )
+
+        if (
+          selectedCategoryValue ===
+          categoryToDelete.name
+        ) {
+          setValue(
+            'category',
+            '',
+            {
+              shouldDirty: true,
+              shouldValidate: true,
+            },
+          )
+        }
+
+        setCategoryToDelete(null)
+      } catch (error: any) {
+        console.error(
+          'Error eliminando categoría:',
+          error,
+        )
+
+        setDeleteCategoryError(
+          error?.response?.data
+            ?.message ||
+            'No fue posible eliminar la categoría.',
+        )
+      } finally {
+        setDeletingCategory(false)
+      }
+    }
 
 
   const handleImages = (
@@ -990,7 +1055,7 @@ function ProductForm(props: ProductFormProps) {
                   Agregar categoría
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  La nueva categoría quedará disponible para todos los productos.
+                  Crea categorías nuevas o elimina las que ya no tengan productos asociados.
                 </p>
               </div>
 
@@ -1044,6 +1109,84 @@ function ProductForm(props: ProductFormProps) {
               </p>
             )}
 
+            <div className="mt-6">
+              <p className="mb-2 text-sm font-medium text-slate-700">
+                Categorías existentes
+              </p>
+
+              <div
+                className="
+                  max-h-52 overflow-y-auto
+                  rounded-xl
+                  border border-slate-200
+                  divide-y divide-slate-100
+                "
+              >
+                {categories.map(
+                  (category) => (
+                    <div
+                      key={category.id}
+                      className="
+                        flex items-center
+                        justify-between gap-3
+                        px-3 py-2.5
+                      "
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-slate-700">
+                          {category.name}
+                        </p>
+
+                        <p className="text-xs text-slate-400">
+                          {category.productCount === 1
+                            ? '1 producto asociado'
+                            : `${category.productCount} productos asociados`}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={
+                          category.productCount >
+                          0
+                        }
+                        onClick={() => {
+                          setDeleteCategoryError('')
+                          setCategoryToDelete(
+                            category,
+                          )
+                        }}
+                        title={
+                          category.productCount >
+                          0
+                            ? 'Primero elimina o reasigna los productos de esta categoría'
+                            : `Eliminar ${category.name}`
+                        }
+                        aria-label={`Eliminar categoría ${category.name}`}
+                        className="
+                          flex h-9 w-9
+                          shrink-0
+                          items-center
+                          justify-center
+                          rounded-lg
+                          text-slate-400
+                          transition
+                          hover:bg-red-50
+                          hover:text-red-600
+                          disabled:cursor-not-allowed
+                          disabled:opacity-30
+                          disabled:hover:bg-transparent
+                          disabled:hover:text-slate-400
+                        "
+                      >
+                        <Trash2 size={17} />
+                      </button>
+                    </div>
+                  ),
+                )}
+              </div>
+            </div>
+
             <div className="mt-6 flex justify-end gap-3">
               <button
                 type="button"
@@ -1073,6 +1216,92 @@ function ProductForm(props: ProductFormProps) {
               >
                 <Plus size={17} />
                 {addingCategory ? 'Guardando...' : 'Agregar categoría'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {categoryToDelete && (
+        <div
+          className="
+            fixed inset-0 z-[60]
+            flex items-center justify-center
+            bg-slate-950/50 p-4
+          "
+        >
+          <div
+            className="
+              w-full max-w-sm
+              rounded-2xl
+              border border-slate-200
+              bg-white p-6
+              shadow-xl
+            "
+          >
+            <h2 className="text-lg font-semibold text-slate-900">
+              ¿Eliminar categoría?
+            </h2>
+
+            <p className="mt-2 text-sm text-slate-500">
+              Vas a eliminar{' '}
+              <span className="font-medium text-slate-700">
+                {categoryToDelete.name}
+              </span>
+              . Esta acción no se puede deshacer.
+            </p>
+
+            {deleteCategoryError && (
+              <p className="mt-3 text-xs text-red-600">
+                {deleteCategoryError}
+              </p>
+            )}
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                disabled={deletingCategory}
+                onClick={() => {
+                  setCategoryToDelete(null)
+                  setDeleteCategoryError('')
+                }}
+                className="
+                  rounded-lg
+                  border border-slate-300
+                  px-4 py-2.5
+                  text-sm font-medium
+                  text-slate-700
+                  transition
+                  hover:bg-slate-50
+                  disabled:opacity-60
+                "
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                disabled={deletingCategory}
+                onClick={() =>
+                  void handleDeleteCategory()
+                }
+                className="
+                  inline-flex items-center gap-2
+                  rounded-lg
+                  bg-red-600
+                  px-4 py-2.5
+                  text-sm font-medium
+                  text-white
+                  transition
+                  hover:bg-red-700
+                  disabled:cursor-not-allowed
+                  disabled:opacity-60
+                "
+              >
+                <Trash2 size={17} />
+                {deletingCategory
+                  ? 'Eliminando...'
+                  : 'Sí, eliminar'}
               </button>
             </div>
           </div>

@@ -4,11 +4,14 @@ import type {
 
 import api from './api'
 
+
 export type Category = {
   id: number
   name: string
   createdAt: string
+  productCount: number
 }
+
 
 export async function getCategories() {
   const response =
@@ -19,6 +22,7 @@ export async function getCategories() {
   return response.data
 }
 
+
 export async function createCategory(
   data: CreateCategoryInput,
 ) {
@@ -26,6 +30,24 @@ export async function createCategory(
     await api.post<Category>(
       '/products/categories',
       data,
+    )
+
+  return response.data
+}
+
+
+export async function deleteCategory(
+  id: number,
+) {
+  const response =
+    await api.delete<{
+      message: string
+      category: {
+        id: number
+        name: string
+      }
+    }>(
+      `/products/categories/${id}`,
     )
 
   return response.data
