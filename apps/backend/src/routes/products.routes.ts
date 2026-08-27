@@ -11,6 +11,7 @@ import {
 
 import {
   requireAuth,
+  requireAuthorizedUser,
 } from '../middleware/auth.middleware.js'
 
 import {
@@ -27,7 +28,8 @@ const router = Router()
 // ------------------------------------
 // Categorías
 // ------------------------------------
-// categoriesRoutes ya exige autenticación.
+// categoriesRoutes ya exige autenticación
+// y autorización.
 // Debe ir antes de /:id para que "categories"
 // no se interprete como un ID de producto.
 router.use(
@@ -41,8 +43,13 @@ router.use(
 // ------------------------------------
 //
 // A partir de aquí ningún endpoint de producto
-// puede ejecutarse sin un JWT válido de Supabase.
-router.use(requireAuth)
+// puede ejecutarse sin:
+// 1. un JWT válido de Supabase
+// 2. un perfil autorizado y activo en C&S
+router.use(
+  requireAuth,
+  requireAuthorizedUser,
+)
 
 
 router.get(

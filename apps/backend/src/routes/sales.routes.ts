@@ -7,6 +7,7 @@ import {
 
 import {
   requireAuth,
+  requireAuthorizedUser,
 } from '../middleware/auth.middleware.js'
 
 const router = Router()
@@ -14,12 +15,14 @@ const router = Router()
 router.get(
   '/',
   requireAuth,
+  requireAuthorizedUser,
   listSales,
 )
 
 router.post(
   '/',
   requireAuth,
+  requireAuthorizedUser,
   addSale,
 )
 

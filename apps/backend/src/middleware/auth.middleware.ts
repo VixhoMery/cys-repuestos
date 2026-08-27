@@ -4,9 +4,17 @@ import type {
   Response,
 } from 'express'
 
+import { pool } from '../db/pool.js'
+
 export type AuthUser = {
   id: string
   email: string | null
+  profile?: {
+    fullName: string
+    role: 'admin' | 'vendedor' | 'bodega'
+    accountType: 'pending' | 'owner' | 'developer'
+    active: boolean
+  }
 }
 
 export interface AuthenticatedRequest
@@ -101,6 +109,87 @@ export async function requireAuth(
     return res.status(500).json({
       message:
         'Error verificando la sesión.',
+    })
+  }
+}
+
+export async function requireAuthorizedUser(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const authUser = req.authUser
+
+    if (!authUser) {
+      return res.status(401).json({
+        message:
+          'Debes iniciar sesión para realizar esta acción.',
+      })
+    }
+
+    const result = await pool.query<{
+      full_name: string
+      role: 'admin' | 'vendedor' | 'bodega'
+      account_type: 'pending' | 'owner' | 'developer'
+      active: boolean
+    }>(
+      `
+        SELECT
+          full_name,
+          role,
+          account_type,
+          active
+        FROM public.profiles
+        WHERE id = $1
+        LIMIT 1
+      `,
+      [authUser.id],
+    )
+
+    const profile = result.rows[0]
+
+    if (!profile) {
+      return res.status(403).json({
+        message:
+          'Tu cuenta no está autorizada para acceder al sistema.',
+      })
+    }
+
+    if (!profile.active) {
+      return res.status(403).json({
+        message:
+          'Tu cuenta todavía no está habilitada para acceder al sistema.',
+      })
+    }
+
+    if (
+      profile.account_type !== 'owner' &&
+      profile.account_type !== 'developer'
+    ) {
+      return res.status(403).json({
+        message:
+          'Tu cuenta no está autorizada para acceder al sistema.',
+      })
+    }
+
+    authUser.profile = {
+      fullName: profile.full_name,
+      role: profile.role,
+      accountType: profile.account_type,
+      active: profile.active,
+    }
+
+    next()
+  } catch (error) {
+    console.error(
+      'Error verificando autorización:',
+      error,
+    )
+
+    return res.status(500).json({
+      message:
+        'Error verificando los permisos de acceso.',
     })
   }
 }

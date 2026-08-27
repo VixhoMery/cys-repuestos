@@ -8,6 +8,7 @@ import {
 
 import {
   requireAuth,
+  requireAuthorizedUser,
 } from '../middleware/auth.middleware.js'
 
 import {
@@ -17,7 +18,10 @@ import {
 
 const router = Router()
 
-router.use(requireAuth)
+router.use(
+  requireAuth,
+  requireAuthorizedUser,
+)
 
 router.get(
   '/',
