@@ -191,14 +191,14 @@ test.describe(
         ).toBeVisible()
 
         await description.fill(
-          'a'.repeat(121),
+          'a'.repeat(1001),
         )
 
         await description.blur()
 
         await expect(
           page.getByText(
-            'La descripción no puede superar los 120 caracteres',
+            'La descripción no puede superar los 1000 caracteres',
             {
               exact: true,
             },

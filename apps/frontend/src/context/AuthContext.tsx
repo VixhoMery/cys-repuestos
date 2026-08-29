@@ -33,6 +33,14 @@ export type Profile = {
   updated_at: string
 }
 
+type AuthResult = {
+  error: string | null
+}
+
+type RegisterResult = AuthResult & {
+  needsEmailConfirmation: boolean
+}
+
 type AuthContextType = {
   user: User | null
   session: Session | null
@@ -44,7 +52,13 @@ type AuthContextType = {
   login: (
     email: string,
     password: string,
-  ) => Promise<{ error: string | null }>
+  ) => Promise<AuthResult>
+  registerAccount: (
+    fullName: string,
+    email: string,
+    password: string,
+  ) => Promise<RegisterResult>
+  loginWithGoogle: () => Promise<AuthResult>
   logout: () => Promise<void>
   refreshProfile: () => Promise<void>
 }
@@ -65,7 +79,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const loadProfile = async (userId: string) => {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, role, active, account_type, created_at, updated_at')
+      .select(
+        'id, full_name, role, active, account_type, created_at, updated_at',
+      )
       .eq('id', userId)
       .single()
 
@@ -96,7 +112,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         setSession(initialSession)
 
-        const currentUser = initialSession?.user ?? null
+        const currentUser =
+          initialSession?.user ?? null
+
         setUser(currentUser)
 
         if (currentUser) {
@@ -118,40 +136,114 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession)
+    } = supabase.auth.onAuthStateChange(
+      (_event, newSession) => {
+        setSession(newSession)
 
-      const currentUser = newSession?.user ?? null
-      setUser(currentUser)
+        const currentUser =
+          newSession?.user ?? null
 
-      if (currentUser) {
-        void loadProfile(currentUser.id)
-      } else {
-        setProfile(null)
-      }
-    })
+        setUser(currentUser)
+
+        if (currentUser) {
+          void loadProfile(currentUser.id)
+        } else {
+          setProfile(null)
+        }
+      },
+    )
 
     return () => {
       subscription.unsubscribe()
     }
   }, [])
 
-  const login = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+  const login = async (
+    email: string,
+    password: string,
+  ) => {
+    const { error } =
+      await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      })
 
     return {
-      error: error ? error.message : null,
+      error:
+        error
+          ? error.message
+          : null,
     }
   }
 
-  const logout = async () => {
-    const { error } = await supabase.auth.signOut()
+  const registerAccount = async (
+    fullName: string,
+    email: string,
+    password: string,
+  ): Promise<RegisterResult> => {
+    const {
+      data,
+      error,
+    } =
+      await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            full_name:
+              fullName.trim(),
+          },
+          emailRedirectTo:
+            `${window.location.origin}/`,
+        },
+      })
 
     if (error) {
-      console.error('Error cerrando sesión:', error)
+      return {
+        error:
+          error.message,
+        needsEmailConfirmation:
+          false,
+      }
+    }
+
+    return {
+      error: null,
+      needsEmailConfirmation:
+        !data.session,
+    }
+  }
+
+  const loginWithGoogle =
+    async (): Promise<AuthResult> => {
+      const {
+        error,
+      } =
+        await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo:
+              `${window.location.origin}/`,
+          },
+        })
+
+      return {
+        error:
+          error
+            ? error.message
+            : null,
+      }
+    }
+
+  const logout = async () => {
+    const { error } =
+      await supabase.auth.signOut()
+
+    if (error) {
+      console.error(
+        'Error cerrando sesión:',
+        error,
+      )
       return
     }
 
@@ -160,18 +252,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setProfile(null)
   }
 
-  const isAuthenticated = !!user
+  const isAuthenticated =
+    !!user
 
   const isAuthorized =
     !!user &&
     !!profile &&
     profile.active === true &&
-    (profile.account_type === 'owner' ||
-      profile.account_type === 'developer')
+    (
+      profile.account_type ===
+        'owner' ||
+      profile.account_type ===
+        'developer'
+    )
 
   const isPending =
     !!user &&
-    profile?.account_type === 'pending'
+    profile?.account_type ===
+      'pending'
 
   return (
     <AuthContext.Provider
@@ -184,6 +282,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         isPending,
         loading,
         login,
+        registerAccount,
+        loginWithGoogle,
         logout,
         refreshProfile,
       }}
@@ -194,10 +294,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext)
+  const context =
+    useContext(AuthContext)
 
   if (!context) {
-    throw new Error('useAuth debe utilizarse dentro de AuthProvider')
+    throw new Error(
+      'useAuth debe utilizarse dentro de AuthProvider',
+    )
   }
 
   return context

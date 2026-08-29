@@ -6,6 +6,7 @@ import ProductDetail from './pages/products/ProductDetail'
 import NewProduct from './pages/products/NewProduct'
 import EditProduct from './pages/products/EditProduct'
 import Login from './pages/auth/Login'
+import Register from './pages/auth/Register'
 
 interface RouteConfig {
   path: string
@@ -59,5 +60,10 @@ export const routes: RouteConfig[] = [
     private: false,
     restricted: true,
   },
+  {
+    path: '/registro',
+    component: Register,
+    private: false,
+    restricted: true,
+  },
 ]
-

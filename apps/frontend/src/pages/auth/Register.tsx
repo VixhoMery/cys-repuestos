@@ -8,27 +8,39 @@ import {
 } from 'react-router'
 
 import {
-  LogIn,
+  UserPlus,
 } from 'lucide-react'
 
 import logo from '../../assets/logo.png'
 import { useAuth } from '../../context/AuthContext'
 
-function Login() {
+function Register() {
   const navigate =
     useNavigate()
 
   const {
-    login,
+    registerAccount,
     loginWithGoogle,
   } =
     useAuth()
 
+  const [
+    fullName,
+    setFullName,
+  ] =
+    useState('')
   const [email, setEmail] =
     useState('')
   const [password, setPassword] =
     useState('')
+  const [
+    confirmPassword,
+    setConfirmPassword,
+  ] =
+    useState('')
   const [error, setError] =
+    useState('')
+  const [message, setMessage] =
     useState('')
   const [loading, setLoading] =
     useState(false)
@@ -45,11 +57,44 @@ function Login() {
     ) => {
       event.preventDefault()
 
-      setLoading(true)
       setError('')
+      setMessage('')
+
+      if (
+        fullName.trim()
+          .length < 2
+      ) {
+        setError(
+          'Ingresa tu nombre.',
+        )
+        return
+      }
+
+      if (
+        password.length <
+        8
+      ) {
+        setError(
+          'La contraseña debe tener al menos 8 caracteres.',
+        )
+        return
+      }
+
+      if (
+        password !==
+        confirmPassword
+      ) {
+        setError(
+          'Las contraseñas no coinciden.',
+        )
+        return
+      }
+
+      setLoading(true)
 
       const result =
-        await login(
+        await registerAccount(
+          fullName,
           email,
           password,
         )
@@ -58,7 +103,16 @@ function Login() {
 
       if (result.error) {
         setError(
-          'Correo o contraseña incorrectos.',
+          'No fue posible crear la cuenta. Revisa los datos e inténtalo nuevamente.',
+        )
+        return
+      }
+
+      if (
+        result.needsEmailConfirmation
+      ) {
+        setMessage(
+          'Cuenta creada. Revisa tu correo y confirma tu dirección para continuar.',
         )
         return
       }
@@ -70,17 +124,22 @@ function Login() {
 
   const handleGoogle =
     async () => {
-      setGoogleLoading(true)
       setError('')
+      setMessage('')
+      setGoogleLoading(
+        true,
+      )
 
       const result =
         await loginWithGoogle()
 
       if (result.error) {
         setError(
-          'No fue posible ingresar con Google.',
+          'No fue posible continuar con Google.',
         )
-        setGoogleLoading(false)
+        setGoogleLoading(
+          false,
+        )
       }
     }
 
@@ -120,12 +179,12 @@ function Login() {
             />
           </div>
 
-          <h1 className="text-3xl font-bold text-slate-900">
-            C&S Repuestos
+          <h1 className="text-2xl font-bold text-slate-900">
+            Crear cuenta
           </h1>
 
-          <p className="mt-2 text-slate-500">
-            Sistema de gestión
+          <p className="mt-2 text-sm leading-6 text-slate-500">
+            Después del registro deberás activar tu acceso con el código privado de C&S.
           </p>
         </div>
 
@@ -134,11 +193,49 @@ function Login() {
           className="space-y-5"
         >
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">
+            <label
+              htmlFor="register-full-name"
+              className="mb-2 block text-sm font-medium text-slate-700"
+            >
+              Nombre
+            </label>
+
+            <input
+              id="register-full-name"
+              type="text"
+              value={fullName}
+              onChange={(
+                event,
+              ) =>
+                setFullName(
+                  event.target
+                    .value,
+                )
+              }
+              required
+              autoComplete="name"
+              className="
+                w-full rounded-lg
+                border border-slate-300
+                px-4 py-3
+                outline-none
+                focus:border-blue-500
+                focus:ring-2
+                focus:ring-blue-100
+              "
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="register-email"
+              className="mb-2 block text-sm font-medium text-slate-700"
+            >
               Correo electrónico
             </label>
 
             <input
+              id="register-email"
               type="email"
               value={email}
               onChange={(
@@ -164,11 +261,15 @@ function Login() {
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">
+            <label
+              htmlFor="register-password"
+              className="mb-2 block text-sm font-medium text-slate-700"
+            >
               Contraseña
             </label>
 
             <input
+              id="register-password"
               type="password"
               value={password}
               onChange={(
@@ -180,7 +281,45 @@ function Login() {
                 )
               }
               required
-              autoComplete="current-password"
+              minLength={8}
+              autoComplete="new-password"
+              className="
+                w-full rounded-lg
+                border border-slate-300
+                px-4 py-3
+                outline-none
+                focus:border-blue-500
+                focus:ring-2
+                focus:ring-blue-100
+              "
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="register-confirm-password"
+              className="mb-2 block text-sm font-medium text-slate-700"
+            >
+              Repetir contraseña
+            </label>
+
+            <input
+              id="register-confirm-password"
+              type="password"
+              value={
+                confirmPassword
+              }
+              onChange={(
+                event,
+              ) =>
+                setConfirmPassword(
+                  event.target
+                    .value,
+                )
+              }
+              required
+              minLength={8}
+              autoComplete="new-password"
               className="
                 w-full rounded-lg
                 border border-slate-300
@@ -199,6 +338,12 @@ function Login() {
             </p>
           )}
 
+          {message && (
+            <p className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+              {message}
+            </p>
+          )}
+
           <button
             type="submit"
             disabled={busy}
@@ -214,12 +359,13 @@ function Login() {
               disabled:opacity-50
             "
           >
-            <LogIn
+            <UserPlus
               size={18}
             />
+
             {loading
-              ? 'Ingresando...'
-              : 'Ingresar'}
+              ? 'Creando cuenta...'
+              : 'Crear cuenta'}
           </button>
 
           <div className="flex items-center gap-3">
@@ -270,12 +416,12 @@ function Login() {
         </form>
 
         <p className="mt-6 text-center text-sm text-slate-500">
-          ¿Aún no tienes cuenta?{' '}
+          ¿Ya tienes cuenta?{' '}
           <Link
-            to="/registro"
+            to="/login"
             className="font-medium text-blue-600 hover:text-blue-700"
           >
-            Crear cuenta
+            Ingresar
           </Link>
         </p>
       </div>
@@ -283,4 +429,4 @@ function Login() {
   )
 }
 
-export default Login
+export default Register
