@@ -29,7 +29,7 @@ function Login() {
       return;
     }
 
-    navigate("/productos");
+    navigate("/", { replace: true });
   };
 
   return (
@@ -46,7 +46,6 @@ function Login() {
   "
       >
         <div className="mb-8 text-center">
-          {/* Logo */}
           <div
             className="
       mx-auto mb-5
@@ -66,7 +65,6 @@ function Login() {
           </div>
 
           <h1 className="text-3xl font-bold text-slate-900">C&S Repuestos</h1>
-
           <p className="mt-2 text-slate-500">Sistema de gestión</p>
         </div>
 
@@ -75,7 +73,6 @@ function Login() {
             <label className="mb-2 block text-sm font-medium text-slate-700">
               Correo electrónico
             </label>
-
             <input
               type="email"
               value={email}
@@ -97,7 +94,6 @@ function Login() {
             <label className="mb-2 block text-sm font-medium text-slate-700">
               Contraseña
             </label>
-
             <input
               type="password"
               value={password}
@@ -133,7 +129,6 @@ function Login() {
             "
           >
             <LogIn size={18} />
-
             {loading ? "Ingresando..." : "Ingresar"}
           </button>
         </form>

@@ -6,52 +6,44 @@ import {
 
 import { routes } from './routes'
 import Layout from './components/layout/Layout'
+import ActivateAccount from './pages/auth/ActivateAccount'
 
 import {
   AuthProvider,
   useAuth,
 } from './context/AuthContext'
 
-
 function AppRouter() {
   const {
     isAuthenticated,
+    isAuthorized,
     loading,
   } = useAuth()
 
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-100">
-        <p className="text-slate-500">
-          Cargando...
-        </p>
+        <p className="text-slate-500">Cargando...</p>
       </div>
     )
   }
 
-  const publicRoutes = routes.filter(
-    (route) => !route.private,
-  )
+  const publicRoutes = routes.filter((route) => !route.private)
+  const privateRoutes = routes.filter((route) => route.private)
 
-  const privateRoutes = routes.filter(
-    (route) => route.private,
-  )
+  const authenticatedHome = isAuthorized
+    ? '/productos'
+    : '/activar'
 
   return (
     <Routes>
-
-      {/* Rutas públicas */}
       {publicRoutes.map((route) => (
         <Route
           key={route.path}
           path={route.path}
           element={
-            route.restricted &&
-            isAuthenticated ? (
-              <Navigate
-                to="/productos"
-                replace
-              />
+            route.restricted && isAuthenticated ? (
+              <Navigate to={authenticatedHome} replace />
             ) : (
               <route.component />
             )
@@ -59,16 +51,27 @@ function AppRouter() {
         />
       ))}
 
-      {/* Rutas privadas */}
+      <Route
+        path="/activar"
+        element={
+          !isAuthenticated ? (
+            <Navigate to="/login" replace />
+          ) : isAuthorized ? (
+            <Navigate to="/productos" replace />
+          ) : (
+            <ActivateAccount />
+          )
+        }
+      />
+
       <Route
         element={
-          isAuthenticated ? (
-            <Layout />
+          !isAuthenticated ? (
+            <Navigate to="/login" replace />
+          ) : !isAuthorized ? (
+            <Navigate to="/activar" replace />
           ) : (
-            <Navigate
-              to="/login"
-              replace
-            />
+            <Layout />
           )
         }
       >
@@ -81,36 +84,23 @@ function AppRouter() {
         ))}
       </Route>
 
-      {/* Ruta inicial */}
       <Route
         path="/"
         element={
           <Navigate
-            to={
-              isAuthenticated
-                ? '/productos'
-                : '/login'
-            }
+            to={isAuthenticated ? authenticatedHome : '/login'}
             replace
           />
         }
       />
 
-      {/* Cualquier URL incorrecta */}
       <Route
         path="*"
-        element={
-          <Navigate
-            to="/"
-            replace
-          />
-        }
+        element={<Navigate to="/" replace />}
       />
-
     </Routes>
   )
 }
-
 
 function App() {
   return (

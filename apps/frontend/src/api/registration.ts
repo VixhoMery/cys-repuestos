@@ -18,13 +18,14 @@ export async function registerOwner(code: string) {
   const { data, error } =
     await supabase.functions.invoke<RegisterOwnerResponse>(
       'register-owner',
-      { body: { code: code.trim() } },
+      {
+        body: { code: code.trim() },
+      },
     )
 
   if (error) {
     let message = 'No fue posible activar la cuenta.'
-    const context =
-      (error as { context?: Response }).context
+    const context = (error as { context?: Response }).context
 
     if (context) {
       try {
