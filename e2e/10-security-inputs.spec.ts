@@ -7,9 +7,8 @@ import {
   login,
 } from './helpers/auth'
 
-
 test.describe(
-  'Entradas y errores',
+  'Entradas y consultas Supabase',
   () => {
     test(
       'un intento de SQL injection en búsqueda se trata como texto',
@@ -31,15 +30,35 @@ test.describe(
                   response.url(),
                 )
 
-              return (
-                url.pathname.endsWith(
-                  '/api/products',
-                ) &&
-                url.searchParams.get(
-                  'search',
-                ) ===
+              if (
+                response.request()
+                  .method() !==
+                  'POST' ||
+                !url.pathname.endsWith(
+                  '/rest/v1/rpc/cys_list_products',
+                ) ||
+                response.status() !==
+                  200
+              ) {
+                return false
+              }
+
+              try {
+                const requestBody =
+                  response.request()
+                    .postDataJSON() as {
+                      p_search?:
+                        | string
+                        | null
+                    }
+
+                return (
+                  requestBody.p_search ===
                   payload
-              )
+                )
+              } catch {
+                return false
+              }
             },
           )
 
@@ -52,17 +71,13 @@ test.describe(
         const response =
           await responsePromise
 
-        expect(
-          response.status(),
-        ).toBe(200)
-
         const body =
           await response.json()
 
-        // Si el payload se concatenara al SQL,
-        // podría devolver todo el catálogo.
-        // Parametrizado correctamente, se busca
-        // literalmente y no debe devolver filas.
+        // Si el payload se concatenara
+        // inseguramente al SQL podría
+        // devolver todo el catálogo.
+        // La RPC debe tratarlo como texto.
         expect(
           body.pagination.total,
         ).toBe(0)
@@ -70,78 +85,6 @@ test.describe(
         expect(
           body.data,
         ).toEqual([])
-      },
-    )
-
-
-    test(
-      'ruta inexistente responde JSON 404 sin stack trace',
-      async ({ request }) => {
-        const response =
-          await request.get(
-            'http://localhost:3000/api/ruta-que-no-existe',
-          )
-
-        expect(
-          response.status(),
-        ).toBe(404)
-
-        expect(
-          response.headers()[
-            'content-type'
-          ],
-        ).toContain(
-          'application/json',
-        )
-
-        const body =
-          await response.json()
-
-        expect(body).toEqual({
-          message:
-            'Ruta no encontrada.',
-        })
-      },
-    )
-
-
-    test(
-      'JSON demasiado grande se rechaza con 413 limpio',
-      async ({ request }) => {
-        const hugeText =
-          'A'.repeat(
-            60 * 1024,
-          )
-
-        const response =
-          await request.post(
-            'http://localhost:3000/api/products',
-            {
-              headers: {
-                'Content-Type':
-                  'application/json',
-              },
-              data: {
-                payload:
-                  hugeText,
-              },
-            },
-          )
-
-        // El parser JSON se ejecuta antes
-        // de requireAuth y debe detener el
-        // cuerpo excesivo.
-        expect(
-          response.status(),
-        ).toBe(413)
-
-        const body =
-          await response.json()
-
-        expect(body).toEqual({
-          message:
-            'La solicitud es demasiado grande.',
-        })
       },
     )
   },

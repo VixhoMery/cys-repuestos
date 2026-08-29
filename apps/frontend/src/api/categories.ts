@@ -11,28 +11,69 @@ export type Category = {
   productCount: number
 }
 
+type RpcErrorLike = {
+  message: string
+  code?: string
+  details?: string
+  hint?: string
+}
+
+function uiError(
+  message: string,
+) {
+  const error =
+    new Error(message) as
+      Error & {
+        response?: {
+          data: {
+            message: string
+          }
+        }
+      }
+
+  // ProductForm todavía utiliza el formato
+  // error.response.data.message que tenía Axios.
+  // Lo conservamos temporalmente para no tocar
+  // el componente visual durante la migración.
+  error.response = {
+    data: {
+      message,
+    },
+  }
+
+  return error
+}
+
 function throwRpcError(
   operation: string,
-  error: {
-    message: string
-    code?: string
-    details?: string
-    hint?: string
-  },
+  error: RpcErrorLike,
 ): never {
   console.error(
     `Error Supabase (${operation}):`,
     error,
   )
 
-  throw new Error(
+  let message =
     error.message ||
-      `No fue posible ${operation}.`,
-  )
+    `No fue posible ${operation}.`
+
+  if (
+    operation ===
+      'crear la categoría' &&
+    error.code === '23505'
+  ) {
+    message =
+      'Esa categoría ya existe.'
+  }
+
+  throw uiError(message)
 }
 
 export async function getCategories() {
-  const { data, error } =
+  const {
+    data,
+    error,
+  } =
     await supabase.rpc(
       'cys_list_categories',
     )
@@ -52,10 +93,16 @@ export async function getCategories() {
 export async function createCategory(
   input: CreateCategoryInput,
 ) {
-  const { data, error } =
+  const {
+    data,
+    error,
+  } =
     await supabase.rpc(
       'cys_create_category',
-      { p_name: input.name },
+      {
+        p_name:
+          input.name,
+      },
     )
 
   if (error) {
@@ -66,7 +113,7 @@ export async function createCategory(
   }
 
   if (!data) {
-    throw new Error(
+    throw uiError(
       'Supabase no devolvió la categoría creada.',
     )
   }
@@ -93,10 +140,15 @@ type DeleteCategoryResult =
 export async function deleteCategory(
   id: number,
 ) {
-  const { data, error } =
+  const {
+    data,
+    error,
+  } =
     await supabase.rpc(
       'cys_delete_category',
-      { p_id: id },
+      {
+        p_id: id,
+      },
     )
 
   if (error) {
@@ -107,22 +159,30 @@ export async function deleteCategory(
   }
 
   const result =
-    data as DeleteCategoryResult | null
+    data as
+      | DeleteCategoryResult
+      | null
 
   if (!result) {
-    throw new Error(
+    throw uiError(
       'Supabase no devolvió el resultado de la eliminación.',
     )
   }
 
-  if (result.status === 'not-found') {
-    throw new Error(
+  if (
+    result.status ===
+    'not-found'
+  ) {
+    throw uiError(
       'La categoría no existe.',
     )
   }
 
-  if (result.status === 'in-use') {
-    throw new Error(
+  if (
+    result.status ===
+    'in-use'
+  ) {
+    throw uiError(
       result.productCount === 1
         ? 'No puedes eliminar esta categoría porque tiene 1 producto asociado.'
         : `No puedes eliminar esta categoría porque tiene ${result.productCount} productos asociados.`,
@@ -132,6 +192,7 @@ export async function deleteCategory(
   return {
     message:
       'Categoría eliminada correctamente.',
-    category: result.category,
+    category:
+      result.category,
   }
 }

@@ -7,6 +7,62 @@ import {
   login,
 } from './helpers/auth'
 
+function isProductsRpcResponse(
+  response: import('@playwright/test').Response,
+  expected: {
+    search?: string | null
+    category?: string | null
+  },
+) {
+  const url =
+    new URL(
+      response.url(),
+    )
+
+  if (
+    response.request().method() !==
+      'POST' ||
+    !url.pathname.endsWith(
+      '/rest/v1/rpc/cys_list_products',
+    ) ||
+    response.status() !== 200
+  ) {
+    return false
+  }
+
+  try {
+    const body =
+      response.request()
+        .postDataJSON() as {
+          p_search?:
+            | string
+            | null
+          p_category?:
+            | string
+            | null
+        }
+
+    if (
+      'search' in expected &&
+      body.p_search !==
+        expected.search
+    ) {
+      return false
+    }
+
+    if (
+      'category' in expected &&
+      body.p_category !==
+        expected.category
+    ) {
+      return false
+    }
+
+    return true
+  } catch {
+    return false
+  }
+}
 
 test.describe(
   'Paginación real de productos',
@@ -26,7 +82,6 @@ test.describe(
         ).toBeVisible()
       },
     )
-
 
     test(
       'avanza a la segunda página',
@@ -72,30 +127,19 @@ test.describe(
       },
     )
 
-
     test(
       'búsqueda encuentra un producto aunque no esté en la página visible',
       async ({ page }) => {
         const responsePromise =
           page.waitForResponse(
-            (response) => {
-              const url =
-                new URL(
-                  response.url(),
-                )
-
-              return (
-                url.pathname.endsWith(
-                  '/api/products',
-                ) &&
-                url.searchParams.get(
-                  'search',
-                ) ===
-                  'PAGTEST-MOT-001' &&
-                response.status() ===
-                  200
-              )
-            },
+            (response) =>
+              isProductsRpcResponse(
+                response,
+                {
+                  search:
+                    'PAGTEST-MOT-001',
+                },
+              ),
           )
 
         await page
@@ -139,30 +183,19 @@ test.describe(
       },
     )
 
-
     test(
       'categoría se filtra en PostgreSQL',
       async ({ page }) => {
         const responsePromise =
           page.waitForResponse(
-            (response) => {
-              const url =
-                new URL(
-                  response.url(),
-                )
-
-              return (
-                url.pathname.endsWith(
-                  '/api/products',
-                ) &&
-                url.searchParams.get(
-                  'category',
-                ) ===
-                  'Motor' &&
-                response.status() ===
-                  200
-              )
-            },
+            (response) =>
+              isProductsRpcResponse(
+                response,
+                {
+                  category:
+                    'Motor',
+                },
+              ),
           )
 
         await page
