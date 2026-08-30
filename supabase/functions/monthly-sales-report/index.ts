@@ -312,9 +312,22 @@ function csvCell(
     | null
     | undefined,
 ) {
-  return `"${String(
-    value ?? '',
-  ).replaceAll(
+  let text =
+    String(
+      value ?? '',
+    )
+
+  if (
+    typeof value === 'string' &&
+    (
+      /^[\t\r\n]/.test(text) ||
+      /^\s*[=+\-@]/.test(text)
+    )
+  ) {
+    text = `'${text}`
+  }
+
+  return `"${text.replaceAll(
     '"',
     '""',
   )}"`

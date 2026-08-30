@@ -49,10 +49,20 @@ function csvCell(
     | null
     | undefined,
 ) {
-  const text =
+  let text =
     String(
       value ?? '',
     )
+
+  if (
+    typeof value === 'string' &&
+    (
+      /^[\t\r\n]/.test(text) ||
+      /^\s*[=+\-@]/.test(text)
+    )
+  ) {
+    text = `'${text}`
+  }
 
   return `"${text.replaceAll(
     '"',
