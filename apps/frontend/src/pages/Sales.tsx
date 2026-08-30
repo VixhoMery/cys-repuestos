@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   CalendarDays,
   Eye,
+  Printer,
   ReceiptText,
   Search,
   UserRound,
@@ -9,9 +10,15 @@ import {
 } from 'lucide-react'
 
 import {
+  getPaymentMethodLabel,
   getSales,
+  saleToReceiptSale,
   type Sale,
 } from '../api/sales'
+
+import {
+  printSaleReceipt,
+} from '../lib/saleReceipt'
 
 
 function Sales() {
@@ -643,6 +650,18 @@ function Sales() {
                   )}
                 </p>
               </div>
+
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                  Método de pago
+                </p>
+
+                <p className="mt-1 font-medium text-slate-800">
+                  {getPaymentMethodLabel(
+                    selectedSale.paymentMethod,
+                  )}
+                </p>
+              </div>
             </div>
 
 
@@ -717,28 +736,68 @@ function Sales() {
                 </span>
               </div>
 
-              <button
-                type="button"
-                onClick={() =>
-                  setSelectedSale(
-                    null,
-                  )
-                }
-                className="
-                  mt-6 w-full
-                  rounded-xl
-                  border
-                  border-slate-300
-                  bg-white
-                  px-4 py-3
-                  font-medium
-                  text-slate-700
-                  transition
-                  hover:bg-slate-100
-                "
-              >
-                Cerrar
-              </button>
+              <div className="mt-6 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      printSaleReceipt(
+                        saleToReceiptSale(
+                          selectedSale,
+                        ),
+                      )
+                    } catch (error) {
+                      console.error(
+                        'Error imprimiendo comprobante:',
+                        error,
+                      )
+
+                      window.alert(
+                        'No fue posible abrir la impresión. Revisa si el navegador bloqueó la ventana emergente.',
+                      )
+                    }
+                  }}
+                  className="
+                    flex flex-1
+                    items-center
+                    justify-center
+                    gap-2
+                    rounded-xl
+                    bg-blue-600
+                    px-4 py-3
+                    font-medium
+                    text-white
+                    transition
+                    hover:bg-blue-700
+                  "
+                >
+                  <Printer size={18} />
+                  Imprimir comprobante
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelectedSale(
+                      null,
+                    )
+                  }
+                  className="
+                    flex-1
+                    rounded-xl
+                    border
+                    border-slate-300
+                    bg-white
+                    px-4 py-3
+                    font-medium
+                    text-slate-700
+                    transition
+                    hover:bg-slate-100
+                  "
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
           </div>
         </div>

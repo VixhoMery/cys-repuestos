@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   LoaderCircle,
+  Printer,
   Search,
   X,
 } from 'lucide-react'
@@ -17,8 +18,18 @@ import {
 } from '../api/products'
 
 import {
+  PAYMENT_METHOD_OPTIONS,
   createSale,
+  createdSaleToReceiptSale,
+  type CreatedSale,
+  type PaymentMethod,
 } from '../api/sales'
+
+import SaleReceipt from '../components/sales/SaleReceipt'
+
+import {
+  printSaleReceipt,
+} from '../lib/saleReceipt'
 
 
 
@@ -82,6 +93,25 @@ function POS() {
     saleCompleted,
     setSaleCompleted,
   ] = useState(false)
+
+  const [
+    paymentMethod,
+    setPaymentMethod,
+  ] = useState<
+    PaymentMethod | ''
+  >('')
+
+  const [
+    completedSale,
+    setCompletedSale,
+  ] = useState<
+    CreatedSale | null
+  >(null)
+
+  const [
+    printError,
+    setPrintError,
+  ] = useState('')
 
 
   // ------------------------------------
@@ -310,6 +340,8 @@ function POS() {
       return
     }
 
+    setPaymentMethod('')
+    setPrintError('')
     setShowFinishModal(true)
   }
 
@@ -318,13 +350,19 @@ function POS() {
   }
 
   const confirmFinishSale = async () => {
+    if (!paymentMethod) {
+      return
+    }
+
     try {
-      await createSale({
-        items: cart.map((item) => ({
-          productId: item.id,
-          quantity: item.quantity,
-        })),
-      })
+      const createdSale =
+        await createSale({
+          items: cart.map((item) => ({
+            productId: item.id,
+            quantity: item.quantity,
+          })),
+          paymentMethod,
+        })
 
       // Volver a consultar productos para
       // reflejar inmediatamente el stock real.
@@ -346,6 +384,10 @@ function POS() {
       )
       setCart([])
       setShowFinishModal(false)
+      setPaymentMethod('')
+      setCompletedSale(
+        createdSale,
+      )
       setSaleCompleted(true)
     } catch (error) {
       console.error(
@@ -355,6 +397,36 @@ function POS() {
 
       window.alert(
         'No fue posible registrar la venta. Revisa el stock e inténtalo nuevamente.',
+      )
+    }
+  }
+
+  const closeReceiptModal = () => {
+    setCompletedSale(null)
+    setPrintError('')
+  }
+
+  const handlePrintReceipt = () => {
+    if (!completedSale) {
+      return
+    }
+
+    try {
+      setPrintError('')
+
+      printSaleReceipt(
+        createdSaleToReceiptSale(
+          completedSale,
+        ),
+      )
+    } catch (error) {
+      console.error(
+        'Error imprimiendo comprobante:',
+        error,
+      )
+
+      setPrintError(
+        'No fue posible abrir la impresión. Revisa si el navegador bloqueó la ventana emergente.',
       )
     }
   }
@@ -748,6 +820,75 @@ function POS() {
             </div>
 
 
+            {/* Método de pago */}
+            <div
+              className="
+                border-t
+                border-slate-200
+                px-6 py-5
+              "
+            >
+              <label
+                htmlFor="sale-payment-method"
+                className="
+                  mb-2 block
+                  text-sm font-medium
+                  text-slate-700
+                "
+              >
+                Método de pago
+              </label>
+
+              <select
+                id="sale-payment-method"
+                value={paymentMethod}
+                onChange={(event) =>
+                  setPaymentMethod(
+                    event.target.value as
+                      | PaymentMethod
+                      | '',
+                  )
+                }
+                className="
+                  w-full rounded-xl
+                  border border-slate-300
+                  bg-white
+                  px-4 py-3
+                  outline-none
+                  transition
+                  focus:border-blue-500
+                  focus:ring-2
+                  focus:ring-blue-100
+                "
+              >
+                <option value="">
+                  Selecciona un método de pago
+                </option>
+
+                {PAYMENT_METHOD_OPTIONS.map(
+                  (option) => (
+                    <option
+                      key={
+                        option.value
+                      }
+                      value={
+                        option.value
+                      }
+                    >
+                      {
+                        option.label
+                      }
+                    </option>
+                  ),
+                )}
+              </select>
+
+              <p className="mt-1 text-xs text-slate-500">
+                Debes seleccionarlo antes de registrar la venta.
+              </p>
+            </div>
+
+
             {/* Resumen */}
             <div
               className="
@@ -811,6 +952,7 @@ function POS() {
               <button
                 type="button"
                 onClick={confirmFinishSale}
+                disabled={!paymentMethod}
                 className="
                   flex-1
                   rounded-xl
@@ -820,9 +962,140 @@ function POS() {
                   text-white
                   transition
                   hover:bg-blue-700
+                  disabled:cursor-not-allowed
+                  disabled:bg-slate-300
                 "
               >
                 Confirmar venta
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* ==================================
+          COMPROBANTE DE VENTA
+      ================================== */}
+
+      {completedSale && (
+        <div
+          className="
+            fixed inset-0 z-[60]
+            flex items-center justify-center
+            bg-slate-950/50
+            p-4
+          "
+        >
+          <div
+            className="
+              w-full max-w-lg
+              overflow-hidden
+              rounded-2xl
+              bg-white
+              shadow-xl
+            "
+          >
+            <div
+              className="
+                flex items-start
+                justify-between
+                border-b
+                border-slate-200
+                p-6
+              "
+            >
+              <div>
+                <p className="text-sm font-medium text-green-600">
+                  Venta registrada
+                </p>
+
+                <h2 className="mt-1 text-xl font-semibold text-slate-900">
+                  Comprobante de compra
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Puedes imprimirlo ahora o volver a imprimirlo desde Ventas.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeReceiptModal}
+                className="
+                  rounded-lg p-2
+                  text-slate-400
+                  transition
+                  hover:bg-slate-100
+                  hover:text-slate-600
+                "
+                aria-label="Cerrar comprobante"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div
+              className="
+                max-h-[60vh]
+                overflow-y-auto
+                bg-slate-50
+                p-6
+              "
+            >
+              <SaleReceipt
+                sale={
+                  createdSaleToReceiptSale(
+                    completedSale,
+                  )
+                }
+              />
+            </div>
+
+            {printError && (
+              <p className="px-6 pt-4 text-sm text-red-600">
+                {printError}
+              </p>
+            )}
+
+            <div className="flex gap-3 p-6">
+              <button
+                type="button"
+                onClick={closeReceiptModal}
+                className="
+                  flex-1
+                  rounded-xl
+                  border border-slate-300
+                  bg-white
+                  px-4 py-3
+                  font-medium
+                  text-slate-700
+                  transition
+                  hover:bg-slate-50
+                "
+              >
+                Cerrar
+              </button>
+
+              <button
+                type="button"
+                onClick={handlePrintReceipt}
+                className="
+                  flex flex-1
+                  items-center
+                  justify-center
+                  gap-2
+                  rounded-xl
+                  bg-blue-600
+                  px-4 py-3
+                  font-medium
+                  text-white
+                  transition
+                  hover:bg-blue-700
+                "
+              >
+                <Printer size={18} />
+                Imprimir comprobante
               </button>
             </div>
           </div>
