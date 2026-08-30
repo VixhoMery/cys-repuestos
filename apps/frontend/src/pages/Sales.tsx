@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 
 import {
-  getPaymentMethodLabel,
+  getPaymentDescription,
   getSales,
   saleToReceiptSale,
   type Sale,
@@ -657,8 +657,9 @@ function Sales() {
                 </p>
 
                 <p className="mt-1 font-medium text-slate-800">
-                  {getPaymentMethodLabel(
+                  {getPaymentDescription(
                     selectedSale.paymentMethod,
+                    selectedSale.installments,
                   )}
                 </p>
               </div>

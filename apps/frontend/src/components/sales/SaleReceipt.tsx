@@ -1,5 +1,5 @@
 import {
-  getPaymentMethodLabel,
+  getPaymentDescription,
   type ReceiptSale,
 } from '../../api/sales'
 
@@ -91,8 +91,9 @@ function SaleReceipt({
           <span className="font-semibold">
             Pago:
           </span>{' '}
-          {getPaymentMethodLabel(
+          {getPaymentDescription(
             sale.paymentMethod,
+            sale.installments,
           )}
         </p>
       </div>

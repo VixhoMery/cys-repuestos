@@ -34,6 +34,15 @@ export const PAYMENT_METHOD_OPTIONS: Array<{
   },
 ]
 
+export const CREDIT_INSTALLMENT_OPTIONS =
+  Array.from(
+    {
+      length: 36,
+    },
+    (_, index) =>
+      index + 1,
+  )
+
 export function getPaymentMethodLabel(
   paymentMethod:
     | PaymentMethod
@@ -54,6 +63,41 @@ export function getPaymentMethodLabel(
   )
 }
 
+export function getPaymentDescription(
+  paymentMethod:
+    | PaymentMethod
+    | null
+    | undefined,
+  installments:
+    | number
+    | null
+    | undefined,
+) {
+  const label =
+    getPaymentMethodLabel(
+      paymentMethod,
+    )
+
+  if (
+    paymentMethod !==
+    'credito'
+  ) {
+    return label
+  }
+
+  if (
+    !installments
+  ) {
+    return `${label} · cuotas no registradas`
+  }
+
+  return `${label} · ${installments} ${
+    installments === 1
+      ? 'cuota'
+      : 'cuotas'
+  }`
+}
+
 export type CreateSaleItem = {
   productId: number
   quantity: number
@@ -69,6 +113,7 @@ export type CreatedSale = {
   soldAt: string
   total: number
   paymentMethod: PaymentMethod
+  installments: number | null
   items: Array<{
     productId: number
     productName: string
@@ -93,6 +138,9 @@ export type Sale = {
   paymentMethod:
     | PaymentMethod
     | null
+  installments:
+    | number
+    | null
   items: SaleItem[]
 }
 
@@ -103,6 +151,9 @@ export type ReceiptSale = {
   total: number
   paymentMethod:
     | PaymentMethod
+    | null
+  installments:
+    | number
     | null
   items: Array<{
     name: string
@@ -123,6 +174,8 @@ export function createdSaleToReceiptSale(
     total: sale.total,
     paymentMethod:
       sale.paymentMethod,
+    installments:
+      sale.installments,
     items: sale.items.map(
       (item) => ({
         name:
@@ -146,6 +199,8 @@ export function saleToReceiptSale(
     total: sale.total,
     paymentMethod:
       sale.paymentMethod,
+    installments:
+      sale.installments,
     items: sale.items.map(
       (item) => ({
         name: item.name,
@@ -189,6 +244,11 @@ export async function createSale(
           input.items,
         p_payment_method:
           input.paymentMethod,
+        p_installments:
+          input.paymentMethod ===
+          'credito'
+            ? input.installments
+            : null,
       },
     )
 

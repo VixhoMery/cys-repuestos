@@ -18,6 +18,7 @@ import {
 } from '../api/products'
 
 import {
+  CREDIT_INSTALLMENT_OPTIONS,
   PAYMENT_METHOD_OPTIONS,
   createSale,
   createdSaleToReceiptSale,
@@ -107,6 +108,13 @@ function POS() {
   ] = useState<
     CreatedSale | null
   >(null)
+
+  const [
+    creditInstallments,
+    setCreditInstallments,
+  ] = useState<
+    number | ''
+  >('')
 
   const [
     printError,
@@ -341,6 +349,7 @@ function POS() {
     }
 
     setPaymentMethod('')
+    setCreditInstallments('')
     setPrintError('')
     setShowFinishModal(true)
   }
@@ -362,6 +371,13 @@ function POS() {
             quantity: item.quantity,
           })),
           paymentMethod,
+          installments:
+            paymentMethod ===
+            'credito'
+              ? Number(
+                  creditInstallments,
+                )
+              : null,
         })
 
       // Volver a consultar productos para
@@ -385,6 +401,7 @@ function POS() {
       setCart([])
       setShowFinishModal(false)
       setPaymentMethod('')
+      setCreditInstallments('')
       setCompletedSale(
         createdSale,
       )
@@ -842,13 +859,25 @@ function POS() {
               <select
                 id="sale-payment-method"
                 value={paymentMethod}
-                onChange={(event) =>
-                  setPaymentMethod(
+                onChange={(event) => {
+                  const value =
                     event.target.value as
                       | PaymentMethod
-                      | '',
+                      | ''
+
+                  setPaymentMethod(
+                    value,
                   )
-                }
+
+                  if (
+                    value !==
+                    'credito'
+                  ) {
+                    setCreditInstallments(
+                      '',
+                    )
+                  }
+                }}
                 className="
                   w-full rounded-xl
                   border border-slate-300
@@ -886,6 +915,79 @@ function POS() {
               <p className="mt-1 text-xs text-slate-500">
                 Debes seleccionarlo antes de registrar la venta.
               </p>
+
+              {paymentMethod ===
+                'credito' && (
+                <div className="mt-4">
+                  <label
+                    htmlFor="sale-credit-installments"
+                    className="
+                      mb-2 block
+                      text-sm font-medium
+                      text-slate-700
+                    "
+                  >
+                    Cuotas
+                  </label>
+
+                  <select
+                    id="sale-credit-installments"
+                    value={
+                      creditInstallments
+                    }
+                    onChange={(event) =>
+                      setCreditInstallments(
+                        event.target
+                          .value ===
+                        ''
+                          ? ''
+                          : Number(
+                              event.target
+                                .value,
+                            ),
+                      )
+                    }
+                    className="
+                      w-full rounded-xl
+                      border border-slate-300
+                      bg-white
+                      px-4 py-3
+                      outline-none
+                      transition
+                      focus:border-blue-500
+                      focus:ring-2
+                      focus:ring-blue-100
+                    "
+                  >
+                    <option value="">
+                      Selecciona las cuotas
+                    </option>
+
+                    {CREDIT_INSTALLMENT_OPTIONS.map(
+                      (
+                        installments,
+                      ) => (
+                        <option
+                          key={
+                            installments
+                          }
+                          value={
+                            installments
+                          }
+                        >
+                          {
+                            installments
+                          }{' '}
+                          {installments ===
+                          1
+                            ? 'cuota'
+                            : 'cuotas'}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </div>
+              )}
             </div>
 
 
@@ -952,7 +1054,14 @@ function POS() {
               <button
                 type="button"
                 onClick={confirmFinishSale}
-                disabled={!paymentMethod}
+                disabled={
+                  !paymentMethod ||
+                  (
+                    paymentMethod ===
+                      'credito' &&
+                    !creditInstallments
+                  )
+                }
                 className="
                   flex-1
                   rounded-xl

@@ -1,5 +1,5 @@
 import {
-  getPaymentMethodLabel,
+  getPaymentDescription,
   type ReceiptSale,
 } from '../api/sales'
 
@@ -214,7 +214,7 @@ export function printSaleReceipt(
             <div class="line"><strong>Venta:</strong> #${sale.id}</div>
             <div class="line"><strong>Fecha:</strong> ${escapeHtml(formatDateTime(sale.soldAt))}</div>
             <div class="line"><strong>Vendedor:</strong> ${escapeHtml(sale.seller)}</div>
-            <div class="line"><strong>Pago:</strong> ${escapeHtml(getPaymentMethodLabel(sale.paymentMethod))}</div>
+            <div class="line"><strong>Pago:</strong> ${escapeHtml(getPaymentDescription(sale.paymentMethod, sale.installments))}</div>
           </section>
 
           <div class="divider"></div>
