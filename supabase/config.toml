@@ -1,2 +1,5 @@
 [functions.register-owner]
 verify_jwt = true
+
+[functions.monthly-sales-report]
+verify_jwt = false
