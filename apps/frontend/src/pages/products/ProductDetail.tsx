@@ -36,10 +36,6 @@ function ProductDetail() {
     useState('')
 
 
-  // ------------------------------------
-  // Cargar producto desde backend
-  // ------------------------------------
-
   useEffect(() => {
     const loadProduct = async () => {
       const productId = Number(id)
@@ -85,10 +81,6 @@ function ProductDetail() {
   }, [id])
 
 
-  // ------------------------------------
-  // Cargando
-  // ------------------------------------
-
   if (loading) {
     return (
       <section className="mx-auto max-w-6xl">
@@ -117,10 +109,6 @@ function ProductDetail() {
     )
   }
 
-
-  // ------------------------------------
-  // Error
-  // ------------------------------------
 
   if (error || !product) {
     return (
@@ -174,14 +162,8 @@ function ProductDetail() {
   }
 
 
-  // ------------------------------------
-  // Producto
-  // ------------------------------------
-
   return (
     <section className="mx-auto max-w-6xl">
-
-      {/* Volver */}
       <button
         type="button"
         onClick={() =>
@@ -210,8 +192,6 @@ function ProductDetail() {
         "
       >
         <div className="grid lg:grid-cols-2">
-
-          {/* Imagen */}
           <div
             className="
               flex min-h-[520px]
@@ -249,10 +229,7 @@ function ProductDetail() {
           </div>
 
 
-          {/* Información */}
           <div className="p-8 lg:p-10">
-
-            {/* Marca */}
             <p
               className="
                 text-sm
@@ -266,7 +243,6 @@ function ProductDetail() {
             </p>
 
 
-            {/* Nombre */}
             <h1
               className="
                 mt-2
@@ -279,7 +255,6 @@ function ProductDetail() {
             </h1>
 
 
-            {/* Precio */}
             <p
               className="
                 mt-4
@@ -295,7 +270,6 @@ function ProductDetail() {
             </p>
 
 
-            {/* Stock */}
             <div className="mt-5">
               <span
                 className={`
@@ -321,7 +295,6 @@ function ProductDetail() {
             </div>
 
 
-            {/* Descripción corta */}
             <p
               className="
                 mt-5
@@ -332,7 +305,6 @@ function ProductDetail() {
             </p>
 
 
-            {/* Información adicional */}
             <dl
               className="
                 mt-8 grid
@@ -374,10 +346,43 @@ function ProductDetail() {
                   {product.category}
                 </dd>
               </div>
+
+              <div>
+                <dt className="text-sm text-slate-500">
+                  Proveedor
+                </dt>
+
+                <dd
+                  className="
+                    mt-1
+                    font-medium
+                    text-slate-900
+                  "
+                >
+                  {product.supplierName ||
+                    'Sin proveedor'}
+                </dd>
+              </div>
+
+              <div>
+                <dt className="text-sm text-slate-500">
+                  Ubicación física
+                </dt>
+
+                <dd
+                  className="
+                    mt-1
+                    font-medium
+                    text-slate-900
+                  "
+                >
+                  {product.location ||
+                    'Sin ubicación asignada'}
+                </dd>
+              </div>
             </dl>
 
 
-            {/* Descripción */}
             <div className="mt-8">
               <h2
                 className="
@@ -402,7 +407,6 @@ function ProductDetail() {
             </div>
 
 
-            {/* Editar */}
             <button
               type="button"
               onClick={() =>

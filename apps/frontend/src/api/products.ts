@@ -20,6 +20,9 @@ export type Product = {
   brand: string
   sku: string
   category: string
+  supplierId: number | null
+  supplierName: string | null
+  location: string | null
   netPrice: number
   priceWithTax: number
   price: number
@@ -75,6 +78,12 @@ function normalizeProduct(
 
   return {
     ...product,
+    supplierId:
+      product.supplierId ?? null,
+    supplierName:
+      product.supplierName ?? null,
+    location:
+      product.location ?? null,
     images,
     image: images[0]?.url,
   }
@@ -204,8 +213,13 @@ export async function createProduct(
         p_brand: product.brand,
         p_sku: product.sku,
         p_category: product.category,
+        p_supplier_id:
+          product.supplierId ?? null,
+        p_location:
+          product.location?.trim() || null,
         p_net_price: product.netPrice,
         p_price: product.price,
+        p_stock: product.stock,
         p_short_description:
           product.shortDescription,
         p_description:
@@ -244,6 +258,10 @@ export async function updateProduct(
         p_brand: product.brand,
         p_sku: product.sku,
         p_category: product.category,
+        p_supplier_id:
+          product.supplierId ?? null,
+        p_location:
+          product.location?.trim() || null,
         p_net_price: product.netPrice,
         p_price: product.price,
         p_stock: product.stock,

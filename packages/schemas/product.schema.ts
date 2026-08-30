@@ -1,13 +1,6 @@
 import { z } from 'zod'
 
 
-// ------------------------------------
-// Campo monetario
-// Acepta string desde el formulario
-// o number desde API/backend.
-// El resultado final siempre es number.
-// ------------------------------------
-
 function moneySchema(
   requiredMessage: string,
   numbersMessage: string,
@@ -55,6 +48,42 @@ const salePriceSchema = moneySchema(
   'El valor de venta solo puede contener números',
   'El valor de venta debe ser mayor a $0',
 )
+
+
+const stockSchema = z.coerce
+  .number()
+  .int(
+    'El stock debe ser un número entero',
+  )
+  .min(
+    0,
+    'El stock no puede ser negativo',
+  )
+
+
+const optionalSupplierIdSchema =
+  z.preprocess(
+    (value) => {
+      if (
+        value === '' ||
+        value === null ||
+        value === undefined
+      ) {
+        return null
+      }
+
+      return value
+    },
+    z.coerce
+      .number()
+      .int(
+        'El proveedor seleccionado no es válido',
+      )
+      .positive(
+        'El proveedor seleccionado no es válido',
+      )
+      .nullable(),
+  )
 
 
 export const productBaseSchema = z.object({
@@ -106,11 +135,26 @@ export const productBaseSchema = z.object({
       'La categoría no puede superar los 60 caracteres',
     ),
 
+  supplierId:
+    optionalSupplierIdSchema,
+
+  location: z
+    .string()
+    .trim()
+    .max(
+      120,
+      'La ubicación no puede superar los 120 caracteres',
+    )
+    .optional()
+    .default(''),
+
   netPrice: netPriceSchema,
 
   // price se mantiene como valor de venta
   // para no romper POS, ventas ni estadísticas.
   price: salePriceSchema,
+
+  stock: stockSchema,
 
   shortDescription: z
     .string()
@@ -143,17 +187,7 @@ export const createProductSchema =
 
 
 export const editProductSchema =
-  productBaseSchema.extend({
-    stock: z.coerce
-      .number()
-      .int(
-        'El stock debe ser un número entero',
-      )
-      .min(
-        0,
-        'El stock no puede ser negativo',
-      ),
-  })
+  productBaseSchema
 
 
 export type CreateProductInput =

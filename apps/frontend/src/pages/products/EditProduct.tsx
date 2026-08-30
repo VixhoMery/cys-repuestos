@@ -109,7 +109,10 @@ function EditProduct() {
         try {
           await removeStorageImages(uploadedPaths)
         } catch (cleanupError) {
-          console.error('No fue posible limpiar las imágenes nuevas:', cleanupError)
+          console.error(
+            'No fue posible limpiar las imágenes nuevas:',
+            cleanupError,
+          )
         }
       }
     }
@@ -123,13 +126,14 @@ function EditProduct() {
     return <p>Producto no encontrado.</p>
   }
 
-  const initialImages: ProductFormImage[] = product.images.map((image) => ({
-    type: 'existing',
-    id: image.id,
-    storagePath: image.storagePath,
-    externalUrl: image.externalUrl,
-    previewUrl: image.url,
-  }))
+  const initialImages: ProductFormImage[] =
+    product.images.map((image) => ({
+      type: 'existing',
+      id: image.id,
+      storagePath: image.storagePath,
+      externalUrl: image.externalUrl,
+      previewUrl: image.url,
+    }))
 
   return (
     <ProductForm
@@ -139,6 +143,8 @@ function EditProduct() {
         brand: product.brand,
         sku: product.sku,
         category: product.category,
+        supplierId: product.supplierId,
+        location: product.location ?? '',
         netPrice: product.netPrice,
         price: product.price,
         stock: product.stock,

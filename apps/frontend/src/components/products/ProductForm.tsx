@@ -18,6 +18,8 @@ import type {
   ProductFormImage,
 } from '../../lib/productImages'
 
+import SupplierField from './SupplierField'
+
 import {
   createCategory,
   deleteCategory,
@@ -115,7 +117,10 @@ function ProductForm(props: ProductFormProps) {
     },
   } = useForm<any>({
     resolver: zodResolver(schema),
-    defaultValues: props.defaultValues,
+    defaultValues: {
+      stock: 0,
+      ...props.defaultValues,
+    },
     mode: 'onBlur',
     reValidateMode: 'onChange',
   })
@@ -454,7 +459,25 @@ function ProductForm(props: ProductFormProps) {
           : 'Agregar producto'}
       </h1>
 
-      <div className="space-y-6">
+      <div className="space-y-8">
+        <section
+          className="
+            rounded-2xl
+            border border-slate-200
+            bg-slate-50/60
+            p-5
+          "
+        >
+          <div className="mb-5">
+            <h2 className="text-base font-semibold text-slate-900">
+              Datos básicos del producto
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Identificación principal del producto.
+            </p>
+          </div>
+
+          <div className="space-y-6">
         {/* Nombre */}
         <div>
           <label className="mb-2 block text-sm font-medium text-slate-700">
@@ -543,94 +566,122 @@ function ProductForm(props: ProductFormProps) {
           </div>
         </div>
 
-        {/* Categoría + Valor neto */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <label className="block text-sm font-medium text-slate-700">
-                Categoría
-              </label>
+          </div>
+        </section>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setAddCategoryError('')
-                  setNewCategoryName('')
-                  setShowCategoryModal(true)
-                }}
-                className="
-                  inline-flex items-center gap-1
-                  text-xs font-medium text-blue-600
-                  transition hover:text-blue-700
-                "
-              >
-                <Plus size={15} />
-                Agregar categoría
-              </button>
-            </div>
-
-            <select
-              autoComplete="off"
-              {...register('category')}
-              disabled={categoriesLoading}
-              className="
-                w-full rounded-lg
-                border border-slate-300
-                bg-white px-4 py-3
-                outline-none transition
-                focus:border-blue-500
-                focus:ring-2 focus:ring-blue-100
-                disabled:cursor-wait
-                disabled:bg-slate-50
-                disabled:text-slate-400
-              "
-            >
-              <option value="">
-                {categoriesLoading
-                  ? 'Cargando categorías...'
-                  : 'Selecciona una categoría'}
-              </option>
-
-              {categories.map((category) => (
-                <option key={category.id} value={category.name}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-
-            {categoryLoadError && (
-              <p className="mt-1 text-xs text-red-600">
-                {categoryLoadError}
-              </p>
-            )}
-
-            {errors.category && (
-              <p className="mt-1 text-xs text-red-600">
-                {String(errors.category.message)}
-              </p>
-            )}
+        <section
+          className="
+            rounded-2xl
+            border border-slate-200
+            bg-slate-50/60
+            p-5
+          "
+        >
+          <div className="mb-5">
+            <h2 className="text-base font-semibold text-slate-900">
+              Clasificación y ubicación
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Organiza el producto por categoría, proveedor y lugar dentro del local.
+            </p>
           </div>
 
+          <div className="space-y-6">
+        {/* Categoría */}
+        <div>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <label className="block text-sm font-medium text-slate-700">
+              Categoría
+            </label>
+
+            <button
+              type="button"
+              onClick={() => {
+                setAddCategoryError('')
+                setNewCategoryName('')
+                setShowCategoryModal(true)
+              }}
+              className="
+                inline-flex items-center gap-1
+                text-xs font-medium text-blue-600
+                transition hover:text-blue-700
+              "
+            >
+              <Plus size={15} />
+              Agregar categoría
+            </button>
+          </div>
+
+          <select
+            autoComplete="off"
+            {...register('category')}
+            disabled={categoriesLoading}
+            className="
+              w-full rounded-lg
+              border border-slate-300
+              bg-white px-4 py-3
+              outline-none transition
+              focus:border-blue-500
+              focus:ring-2 focus:ring-blue-100
+              disabled:cursor-wait
+              disabled:bg-slate-50
+              disabled:text-slate-400
+            "
+          >
+            <option value="">
+              {categoriesLoading
+                ? 'Cargando categorías...'
+                : 'Selecciona una categoría'}
+            </option>
+
+            {categories.map((category) => (
+              <option key={category.id} value={category.name}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+
+          {categoryLoadError && (
+            <p className="mt-1 text-xs text-red-600">
+              {categoryLoadError}
+            </p>
+          )}
+
+          {errors.category && (
+            <p className="mt-1 text-xs text-red-600">
+              {String(errors.category.message)}
+            </p>
+          )}
+        </div>
+
+        {/* Proveedor + ubicación física */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <SupplierField
+            register={register}
+            setValue={setValue}
+            watch={watch}
+            errorMessage={
+              errors.supplierId
+                ? String(errors.supplierId.message)
+                : ''
+            }
+          />
+
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">
-              Valor neto
+            <label
+              htmlFor="product-location"
+              className="mb-2 block text-sm font-medium text-slate-700"
+            >
+              Ubicación física
             </label>
 
             <input
+              id="product-location"
               autoComplete="off"
-              {...netPriceField}
+              {...register('location')}
               type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              onChange={(event) => {
-                event.target.value =
-                  event.target.value.replace(
-                    /\D/g,
-                    '',
-                  )
-
-                netPriceField.onChange(event)
-              }}
+              maxLength={120}
+              placeholder="Ej: Pasillo 2 · Estante B · Nivel 3"
               className="
                 w-full rounded-lg
                 border border-slate-300
@@ -643,12 +694,77 @@ function ProductForm(props: ProductFormProps) {
               "
             />
 
-            {errors.netPrice && (
+            <p className="mt-1 text-xs text-slate-500">
+              Opcional. Puedes completarla más adelante.
+            </p>
+
+            {errors.location && (
               <p className="mt-1 text-xs text-red-600">
-                {String(errors.netPrice.message)}
+                {String(errors.location.message)}
               </p>
             )}
           </div>
+        </div>
+
+          </div>
+        </section>
+
+        <section
+          className="
+            rounded-2xl
+            border border-slate-200
+            bg-slate-50/60
+            p-5
+          "
+        >
+          <div className="mb-5">
+            <h2 className="text-base font-semibold text-slate-900">
+              Precios e inventario
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Valores comerciales y cantidad disponible.
+            </p>
+          </div>
+
+          <div className="space-y-6">
+        {/* Valor neto */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-slate-700">
+            Valor neto
+          </label>
+
+          <input
+            autoComplete="off"
+            {...netPriceField}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            onChange={(event) => {
+              event.target.value =
+                event.target.value.replace(
+                  /\D/g,
+                  '',
+                )
+
+              netPriceField.onChange(event)
+            }}
+            className="
+              w-full rounded-lg
+              border border-slate-300
+              px-4 py-3
+              outline-none
+              transition
+              focus:border-blue-500
+              focus:ring-2
+              focus:ring-blue-100
+            "
+          />
+
+          {errors.netPrice && (
+            <p className="mt-1 text-xs text-red-600">
+              {String(errors.netPrice.message)}
+            </p>
+          )}
         </div>
 
         {/* Valor con IVA + Valor de venta */}
@@ -719,6 +835,62 @@ function ProductForm(props: ProductFormProps) {
           </div>
         </div>
 
+        {/* Stock */}
+        <div>
+          <label
+            htmlFor="product-stock"
+            className="mb-2 block text-sm font-medium text-slate-700"
+          >
+            Stock
+          </label>
+
+          <input
+            id="product-stock"
+            autoComplete="off"
+            {...register('stock')}
+            type="number"
+            min="0"
+            step="1"
+            className="
+              w-full rounded-lg
+              border border-slate-300
+              px-4 py-3
+              outline-none
+              transition
+              focus:border-blue-500
+              focus:ring-2
+              focus:ring-blue-100
+            "
+          />
+
+          {errors.stock && (
+            <p className="mt-1 text-xs text-red-600">
+              {String(errors.stock.message)}
+            </p>
+          )}
+        </div>
+
+          </div>
+        </section>
+
+        <section
+          className="
+            rounded-2xl
+            border border-slate-200
+            bg-slate-50/60
+            p-5
+          "
+        >
+          <div className="mb-5">
+            <h2 className="text-base font-semibold text-slate-900">
+              Descripción del producto
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Información breve y detalle para identificarlo correctamente.
+            </p>
+          </div>
+
+          <div className="space-y-6">
         {/* Descripción corta */}
         <div>
           <label className="mb-2 block text-sm font-medium text-slate-700">
@@ -781,38 +953,27 @@ function ProductForm(props: ProductFormProps) {
           )}
         </div>
 
-        {/* Stock: solo edición */}
-        {isEdit && (
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">
-              Stock
-            </label>
-
-            <input
-              autoComplete="off"
-              {...register('stock')}
-              type="number"
-              min="0"
-              className="
-                w-full rounded-lg
-                border border-slate-300
-                px-4 py-3
-                outline-none
-                transition
-                focus:border-blue-500
-                focus:ring-2
-                focus:ring-blue-100
-              "
-            />
-
-            {errors.stock && (
-              <p className="mt-1 text-xs text-red-600">
-                {String(errors.stock.message)}
-              </p>
-            )}
           </div>
-        )}
+        </section>
 
+        <section
+          className="
+            rounded-2xl
+            border border-slate-200
+            bg-slate-50/60
+            p-5
+          "
+        >
+          <div className="mb-5">
+            <h2 className="text-base font-semibold text-slate-900">
+              Fotografías
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Imágenes que ayudarán a reconocer el producto.
+            </p>
+          </div>
+
+          <div>
         {/* Fotografías */}
         <div>
           <div className="mb-3 flex items-end justify-between">
@@ -1004,6 +1165,9 @@ function ProductForm(props: ProductFormProps) {
             </div>
           )}
         </div>
+
+          </div>
+        </section>
 
         {/* Guardar */}
         <button
