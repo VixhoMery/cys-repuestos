@@ -21,6 +21,7 @@ type SupplierFieldProps = {
   setValue: any
   watch: any
   errorMessage?: string
+  initialSupplierId?: number | null
 }
 
 function SupplierField({
@@ -28,6 +29,7 @@ function SupplierField({
   setValue,
   watch,
   errorMessage,
+  initialSupplierId,
 }: SupplierFieldProps) {
   const [
     suppliers,
@@ -98,17 +100,31 @@ function SupplierField({
     const loadSuppliers =
       async () => {
         try {
-          setSuppliersLoading(
-            true,
-          )
-          setSupplierLoadError(
-            '',
-          )
+          setSuppliersLoading(true)
+          setSupplierLoadError('')
 
           const data =
             await getSuppliers()
 
           setSuppliers(data)
+
+          if (
+            initialSupplierId !== null &&
+            initialSupplierId !== undefined &&
+            data.some(
+              (supplier) =>
+                supplier.id === initialSupplierId,
+            )
+          ) {
+            setValue(
+              'supplierId',
+              initialSupplierId,
+              {
+                shouldDirty: false,
+                shouldValidate: false,
+              },
+            )
+          }
         } catch (error) {
           console.error(
             'Error cargando proveedores:',
@@ -119,14 +135,12 @@ function SupplierField({
             'No fue posible cargar los proveedores.',
           )
         } finally {
-          setSuppliersLoading(
-            false,
-          )
+          setSuppliersLoading(false)
         }
       }
 
     void loadSuppliers()
-  }, [])
+  }, [initialSupplierId, setValue])
 
   const handleAddSupplier =
     async () => {
@@ -339,12 +353,29 @@ function SupplierField({
         <select
           id="product-supplier"
           autoComplete="off"
-          {...register(
-            'supplierId',
-          )}
-          disabled={
-            suppliersLoading
+          {...register('supplierId')}
+          value={
+            selectedSupplierValue === null ||
+            selectedSupplierValue === undefined
+              ? ''
+              : String(selectedSupplierValue)
           }
+          onChange={(event) => {
+            const value =
+              event.target.value
+
+            setValue(
+              'supplierId',
+              value === ''
+                ? null
+                : Number(value),
+              {
+                shouldDirty: true,
+                shouldValidate: true,
+              },
+            )
+          }}
+          disabled={suppliersLoading}
           className="
             w-full rounded-lg
             border border-slate-300
@@ -356,7 +387,7 @@ function SupplierField({
             disabled:bg-slate-50
             disabled:text-slate-400
           "
-        >
+            >
           <option value="">
             {suppliersLoading
               ? 'Cargando proveedores...'
@@ -366,16 +397,10 @@ function SupplierField({
           {suppliers.map(
             (supplier) => (
               <option
-                key={
-                  supplier.id
-                }
-                value={
-                  supplier.id
-                }
+                key={supplier.id}
+                value={String(supplier.id)}
               >
-                {
-                  supplier.name
-                }
+                {supplier.name}
               </option>
             ),
           )}

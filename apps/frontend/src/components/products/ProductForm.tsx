@@ -615,6 +615,17 @@ function ProductForm(props: ProductFormProps) {
           <select
             autoComplete="off"
             {...register('category')}
+            value={selectedCategoryValue ?? ''}
+            onChange={(event) => {
+              setValue(
+                'category',
+                event.target.value,
+                {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                },
+              )
+            }}
             disabled={categoriesLoading}
             className="
               w-full rounded-lg
@@ -660,6 +671,9 @@ function ProductForm(props: ProductFormProps) {
             register={register}
             setValue={setValue}
             watch={watch}
+            initialSupplierId={
+              props.defaultValues?.supplierId ?? null
+            }
             errorMessage={
               errors.supplierId
                 ? String(errors.supplierId.message)
