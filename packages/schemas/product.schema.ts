@@ -176,8 +176,8 @@ export const productBaseSchema = z.object({
       'La descripción es obligatoria',
     )
     .max(
-      1000,
-      'La descripción no puede superar los 1000 caracteres',
+      6000,
+      'La descripción no puede superar los 6000 caracteres',
     ),
 })
 
