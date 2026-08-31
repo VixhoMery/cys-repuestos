@@ -30,7 +30,7 @@ import {
 
 import {
   PAYMENT_METHOD_OPTIONS,
-  getSales,
+  getSalesRange,
   type PaymentMethod,
   type Sale,
 } from '../api/sales'
@@ -137,6 +137,51 @@ function formatInputDate(
 }
 
 
+function getStatisticsDataRange(
+  period: Period,
+  customStart: string,
+  customEnd: string,
+) {
+  const now = new Date()
+
+  if (period === 'custom') {
+    if (!customStart || !customEnd) {
+      return null
+    }
+
+    const start =
+      new Date(`${customStart}T00:00:00`)
+    const end =
+      new Date(`${customEnd}T00:00:00`)
+
+    end.setDate(end.getDate() + 1)
+
+    if (
+      Number.isNaN(start.getTime()) ||
+      Number.isNaN(end.getTime()) ||
+      start >= end
+    ) {
+      return null
+    }
+
+    return { start, end }
+  }
+
+  return {
+    start: new Date(
+      now.getFullYear(),
+      0,
+      1,
+    ),
+    end: new Date(
+      now.getFullYear() + 1,
+      0,
+      1,
+    ),
+  }
+}
+
+
 function Statistics() {
   const [period, setPeriod] =
     useState<Period>('week')
@@ -174,14 +219,47 @@ function Statistics() {
 
 
   // ------------------------------------
-  // Cargar ventas reales
+  // Cargar solo el rango necesario
   // ------------------------------------
 
+  const statisticsRange =
+    useMemo(
+      () =>
+        getStatisticsDataRange(
+          period,
+          customStart,
+          customEnd,
+        ),
+      [period, customStart, customEnd],
+    )
+
+  const statisticsRangeStart =
+    statisticsRange?.start.toISOString() ?? null
+  const statisticsRangeEnd =
+    statisticsRange?.end.toISOString() ?? null
+
   useEffect(() => {
+    let cancelled = false
+
     const loadSales = async () => {
+      if (
+        !statisticsRangeStart ||
+        !statisticsRangeEnd
+      ) {
+        if (!cancelled) setSales([])
+        return
+      }
+
       try {
-        const data = await getSales()
-        setSales(data)
+        const data =
+          await getSalesRange(
+            new Date(statisticsRangeStart),
+            new Date(statisticsRangeEnd),
+          )
+
+        if (!cancelled) {
+          setSales(data)
+        }
       } catch (error) {
         console.error(
           'Error cargando estadísticas:',
@@ -191,7 +269,11 @@ function Statistics() {
     }
 
     loadSales()
-  }, [])
+
+    return () => {
+      cancelled = true
+    }
+  }, [statisticsRangeStart, statisticsRangeEnd])
 
 
   // ------------------------------------

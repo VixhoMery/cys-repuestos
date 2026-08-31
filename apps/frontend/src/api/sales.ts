@@ -213,6 +213,43 @@ export function saleToReceiptSale(
   }
 }
 
+
+const SALES_CACHE_TTL_MS = 10_000
+
+let salesCache:
+  | {
+      data: Sale[]
+      expiresAt: number
+    }
+  | null = null
+
+let salesRequest:
+  | Promise<Sale[]>
+  | null = null
+
+const salesRangeCache =
+  new Map<
+    string,
+    {
+      data: Sale[]
+      expiresAt: number
+    }
+  >()
+
+const salesRangeRequests =
+  new Map<
+    string,
+    Promise<Sale[]>
+  >()
+
+
+export function invalidateSalesCache() {
+  salesCache = null
+  salesRequest = null
+  salesRangeCache.clear()
+  salesRangeRequests.clear()
+}
+
 function throwRpcError(
   operation: string,
   error: {
@@ -265,23 +302,127 @@ export async function createSale(
     )
   }
 
+  invalidateSalesCache()
+
   return data as CreatedSale
 }
 
 export async function getSales() {
-  const { data, error } =
-    await supabase.rpc(
-      'cys_list_sales',
-    )
+  const now = Date.now()
 
-  if (error) {
-    throwRpcError(
-      'cargar las ventas',
-      error,
+  if (
+    salesCache &&
+    salesCache.expiresAt > now
+  ) {
+    return salesCache.data
+  }
+
+  if (salesRequest) {
+    return salesRequest
+  }
+
+  salesRequest = (async () => {
+    const { data, error } =
+      await supabase.rpc(
+        'cys_list_sales',
+      )
+
+    if (error) {
+      throwRpcError(
+        'cargar las ventas',
+        error,
+      )
+    }
+
+    const sales =
+      (
+        data as Sale[] | null
+      ) ?? []
+
+    salesCache = {
+      data: sales,
+      expiresAt:
+        Date.now() +
+        SALES_CACHE_TTL_MS,
+    }
+
+    return sales
+  })()
+
+  try {
+    return await salesRequest
+  } finally {
+    salesRequest = null
+  }
+}
+
+export async function getSalesRange(
+  start: Date,
+  end: Date,
+) {
+  if (
+    Number.isNaN(start.getTime()) ||
+    Number.isNaN(end.getTime()) ||
+    start >= end
+  ) {
+    throw new Error(
+      'El rango de fechas no es válido.',
     )
   }
 
-  return (
-    data as Sale[] | null
-  ) ?? []
+  const startIso = start.toISOString()
+  const endIso = end.toISOString()
+  const key = `${startIso}|${endIso}`
+  const now = Date.now()
+  const cached = salesRangeCache.get(key)
+
+  if (
+    cached &&
+    cached.expiresAt > now
+  ) {
+    return cached.data
+  }
+
+  const pending = salesRangeRequests.get(key)
+  if (pending) return pending
+
+  const request = (async () => {
+    const { data, error } =
+      await supabase.rpc(
+        'cys_list_sales_range',
+        {
+          p_start: startIso,
+          p_end: endIso,
+        },
+      )
+
+    if (error) {
+      throwRpcError(
+        'cargar las ventas del período',
+        error,
+      )
+    }
+
+    const sales =
+      (data as Sale[] | null) ?? []
+
+    salesRangeCache.set(
+      key,
+      {
+        data: sales,
+        expiresAt:
+          Date.now() + SALES_CACHE_TTL_MS,
+      },
+    )
+
+    return sales
+  })()
+
+  salesRangeRequests.set(key, request)
+
+  try {
+    return await request
+  } finally {
+    salesRangeRequests.delete(key)
+  }
 }
