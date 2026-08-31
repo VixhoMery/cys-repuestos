@@ -660,6 +660,9 @@ function ProductForm(props: ProductFormProps) {
             register={register}
             setValue={setValue}
             watch={watch}
+            initialSupplierId={
+              props.defaultValues?.supplierId ?? null
+            }
             errorMessage={
               errors.supplierId
                 ? String(errors.supplierId.message)

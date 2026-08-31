@@ -21,6 +21,7 @@ type SupplierFieldProps = {
   setValue: any
   watch: any
   errorMessage?: string
+  initialSupplierId?: number | null
 }
 
 function SupplierField({
@@ -28,6 +29,7 @@ function SupplierField({
   setValue,
   watch,
   errorMessage,
+  initialSupplierId,
 }: SupplierFieldProps) {
   const [
     suppliers,
@@ -108,6 +110,24 @@ function SupplierField({
           const data =
             await getSuppliers()
 
+          if (
+            initialSupplierId !== null &&
+            initialSupplierId !== undefined &&
+            data.some(
+              (supplier) =>
+                supplier.id === initialSupplierId,
+            )
+          ) {
+            setValue(
+              'supplierId',
+              initialSupplierId,
+              {
+                shouldDirty: false,
+                shouldValidate: false,
+              },
+            )
+          }  
+
           setSuppliers(data)
         } catch (error) {
           console.error(
@@ -126,7 +146,7 @@ function SupplierField({
       }
 
     void loadSuppliers()
-  }, [])
+  }, [initialSupplierId, setValue])
 
   const handleAddSupplier =
     async () => {
