@@ -1,20 +1,37 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+
+
+
+const allowedOrigins = new Set([
+  'https://sistema.cysrepuestos.cl',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+])
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get('Origin')
+
+  return {
+    ...(origin && allowedOrigins.has(origin)
+      ? { 'Access-Control-Allow-Origin': origin }
+      : {}),
+    'Access-Control-Allow-Headers':
+      'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Vary': 'Origin',
+  }
 }
 
 function jsonResponse(
+  req: Request,
   body: Record<string, unknown>,
   status = 200,
 ) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
-      ...corsHeaders,
+      ...getCorsHeaders(req),
       'Content-Type': 'application/json',
       'Cache-Control': 'no-store',
     },
@@ -39,11 +56,13 @@ function safeEqual(a: Uint8Array, b: Uint8Array) {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', {
+      headers: getCorsHeaders(req),
+    })
   }
 
   if (req.method !== 'POST') {
-    return jsonResponse({ message: 'Método no permitido.' }, 405)
+    return jsonResponse(req, {message: 'Método no permitido.' }, 405)
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
@@ -53,7 +72,7 @@ Deno.serve(async (req) => {
 
   if (!supabaseUrl || !publishableKey || !serviceRoleKey || !registrationCode) {
     console.error('Faltan variables internas de registro.')
-    return jsonResponse({
+    return jsonResponse(req, {
       message: 'El registro de usuarios no está configurado.',
     }, 500)
   }
@@ -61,7 +80,7 @@ Deno.serve(async (req) => {
   const authorization = req.headers.get('Authorization')
 
   if (!authorization?.startsWith('Bearer ')) {
-    return jsonResponse({
+    return jsonResponse(req, {
       message: 'Debes iniciar sesión para realizar esta acción.',
     }, 401)
   }
@@ -84,7 +103,7 @@ Deno.serve(async (req) => {
     await userClient.auth.getUser()
 
   if (userError || !userData.user) {
-    return jsonResponse({
+    return jsonResponse(req, {
       message: 'La sesión no es válida o ha expirado.',
     }, 401)
   }
@@ -110,7 +129,7 @@ Deno.serve(async (req) => {
 
   if (rateError) {
     console.error('Error aplicando rate limit:', rateError)
-    return jsonResponse({
+    return jsonResponse(req, {
       message: 'No fue posible validar el intento de registro.',
     }, 500)
   }
@@ -121,7 +140,7 @@ Deno.serve(async (req) => {
   } | null
 
   if (rate?.allowed !== true) {
-    return jsonResponse({
+    return jsonResponse(req, {
       message:
         'Demasiados intentos de registro. Intenta nuevamente más tarde.',
       retryAfterSeconds:
@@ -134,14 +153,14 @@ Deno.serve(async (req) => {
   try {
     body = await req.json()
   } catch {
-    return jsonResponse({ message: 'La solicitud no es válida.' }, 400)
+    return jsonResponse(req, { message: 'La solicitud no es válida.' }, 400)
   }
 
   const code =
     typeof body.code === 'string' ? body.code.trim() : ''
 
   if (code.length < 12 || code.length > 200) {
-    return jsonResponse({
+    return jsonResponse(req, {
       message: 'El código de registro no es válido.',
     }, 400)
   }
@@ -152,7 +171,7 @@ Deno.serve(async (req) => {
   ])
 
   if (!safeEqual(received, expected)) {
-    return jsonResponse({
+    return jsonResponse(req, {
       message: 'El código de registro no es válido.',
     }, 403)
   }
@@ -164,7 +183,7 @@ Deno.serve(async (req) => {
 
   if (error) {
     console.error('Error activando owner:', error)
-    return jsonResponse({
+    return jsonResponse(req, {
       message: 'No fue posible activar la cuenta.',
     }, 500)
   }
@@ -178,26 +197,26 @@ Deno.serve(async (req) => {
   } | null
 
   if (result?.status === 'profile-not-found') {
-    return jsonResponse({
+    return jsonResponse(req, {
       message: 'Tu cuenta no tiene un perfil válido.',
     }, 403)
   }
 
   if (result?.status === 'invalid-state') {
-    return jsonResponse({
+    return jsonResponse(req, {
       message: 'Tu cuenta no puede utilizar este registro.',
     }, 403)
   }
 
   if (result?.status === 'already-authorized') {
-    return jsonResponse({
+    return jsonResponse(req, {
       message: 'Esta cuenta ya está autorizada.',
       accountType: result.accountType,
     }, 409)
   }
 
   if (result?.status === 'registration-full') {
-    return jsonResponse({
+    return jsonResponse(req, {
       message: 'Los tres cupos de socios ya fueron utilizados.',
       ownersUsed: result.ownersUsed,
       ownersLimit: result.ownersLimit,
@@ -205,12 +224,12 @@ Deno.serve(async (req) => {
   }
 
   if (result?.status !== 'activated') {
-    return jsonResponse({
+    return jsonResponse(req, {
       message: 'Supabase no devolvió un estado válido.',
     }, 500)
   }
 
-  return jsonResponse({
+  return jsonResponse(req, {
     message: 'Cuenta activada correctamente.',
     profile: result.profile,
     ownersUsed: result.ownersUsed,
