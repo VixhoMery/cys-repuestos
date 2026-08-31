@@ -92,6 +92,7 @@ export function printSaleReceipt(
 
         <style>
           @page {
+            size: 58mm auto;
             margin: 2mm;
           }
 
@@ -108,7 +109,7 @@ export function printSaleReceipt(
           }
 
           body {
-            width: 54mm;
+            width: 52mm;
             font-family:
               "DejaVu Sans Mono",
               "Liberation Mono",
@@ -118,8 +119,8 @@ export function printSaleReceipt(
           }
 
           .receipt {
-            width: 54mm;
-            max-width: 54mm;
+            width: 52mm;
+            max-width: 52mm;
             margin: 0 auto;
           }
 
@@ -200,8 +201,8 @@ export function printSaleReceipt(
             }
 
             .receipt {
-              width: 54mm;
-              max-width: 54mm;
+              width: 52mm;
+              max-width: 52mm;
               margin: 0;
             }
           }
