@@ -22,6 +22,11 @@ function CategoryFilter({
   const [categories, setCategories] =
     useState<Category[]>([])
 
+  const [
+    showAllCategories,
+    setShowAllCategories,
+  ] = useState(false)
+
   useEffect(() => {
     const loadCategories = async () => {
       try {
@@ -47,6 +52,11 @@ function CategoryFilter({
     ),
   ]
 
+  const visibleCategoryNames =
+    showAllCategories
+      ? categoryNames
+      : categoryNames.slice(0, 7)
+
   return (
     <aside className="w-full lg:w-56">
       <h2 className="mb-4 text-2xl font-semibold text-slate-900">
@@ -54,7 +64,7 @@ function CategoryFilter({
       </h2>
 
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        {categoryNames.map(
+        {visibleCategoryNames.map(
           (category) => (
             <button
               key={category}
@@ -65,10 +75,11 @@ function CategoryFilter({
                 )
               }
               className={`
-                block w-full border-b border-slate-200
-                px-5 py-4 text-left
+                block w-full
+                border-b border-slate-200
+                px-5 py-4
+                text-left
                 transition
-                last:border-b-0
                 ${
                   selectedCategory ===
                   category
@@ -80,6 +91,30 @@ function CategoryFilter({
               {category}
             </button>
           ),
+        )}
+
+        {categoryNames.length > 7 && (
+          <button
+            type="button"
+            onClick={() =>
+              setShowAllCategories(
+                (current) => !current,
+              )
+            }
+            className="
+              block w-full
+              px-5 py-4
+              text-left
+              font-medium
+              text-blue-600
+              transition
+              hover:bg-blue-50
+            "
+          >
+            {showAllCategories
+              ? 'Mostrar menos'
+              : `Mostrar todas (${categories.length})`}
+          </button>
         )}
       </div>
     </aside>
