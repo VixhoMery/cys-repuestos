@@ -1,16 +1,57 @@
-import Products from './pages/products/Products'
-import POS from './pages/POS'
-import Sales from './pages/Sales'
-import Statistics from './pages/Statistics'
-import ProductDetail from './pages/products/ProductDetail'
-import NewProduct from './pages/products/NewProduct'
-import EditProduct from './pages/products/EditProduct'
-import Login from './pages/auth/Login'
-import Register from './pages/auth/Register'
+import {
+  createElement,
+  lazy,
+  type ComponentType,
+} from 'react'
+
+const Products =
+  lazy(() =>
+    import('./pages/products/Products'),
+  )
+
+const POS =
+  lazy(() =>
+    import('./pages/POS'),
+  )
+
+const Sales =
+  lazy(() =>
+    import('./pages/Sales'),
+  )
+
+const Statistics =
+  lazy(() =>
+    import('./pages/Statistics'),
+  )
+
+const ProductDetail =
+  lazy(() =>
+    import('./pages/products/ProductDetail'),
+  )
+
+const NewProduct =
+  lazy(() =>
+    import('./pages/products/NewProduct'),
+  )
+
+const EditProduct =
+  lazy(() =>
+    import('./pages/products/EditProduct'),
+  )
+
+const Login =
+  lazy(() =>
+    import('./pages/auth/Login'),
+  )
+
+const Register =
+  lazy(() =>
+    import('./pages/auth/Register'),
+  )
 
 interface RouteConfig {
   path: string
-  component: React.ComponentType
+  component: ComponentType
   private?: boolean
   restricted?: boolean
   adminOnly?: boolean
@@ -19,50 +60,59 @@ interface RouteConfig {
 export const routes: RouteConfig[] = [
   {
     path: '/productos',
-    component: Products,
+    component: () =>
+      createElement(Products),
     private: true,
   },
   {
     path: '/pos',
-    component: POS,
+    component: () =>
+      createElement(POS),
     private: true,
   },
   {
     path: '/ventas',
-    component: Sales,
+    component: () =>
+      createElement(Sales),
     private: true,
   },
   {
     path: '/estadisticas',
-    component: Statistics,
+    component: () =>
+      createElement(Statistics),
     private: true,
   },
 
   {
     path: '/productos/:id',
-    component: ProductDetail,
+    component: () =>
+      createElement(ProductDetail),
     private: true,
   },
   {
     path: '/productos/nuevo',
-    component: NewProduct,
+    component: () =>
+      createElement(NewProduct),
     private: true,
   },
   {
     path: '/productos/:id/editar',
-    component: EditProduct,
+    component: () =>
+      createElement(EditProduct),
     private: true,
   },
 
   {
     path: '/login',
-    component: Login,
+    component: () =>
+      createElement(Login),
     private: false,
     restricted: true,
   },
   {
     path: '/registro',
-    component: Register,
+    component: () =>
+      createElement(Register),
     private: false,
     restricted: true,
   },

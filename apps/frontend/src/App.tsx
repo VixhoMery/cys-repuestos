@@ -1,17 +1,42 @@
 import {
+  lazy,
+  Suspense,
+} from 'react'
+
+import {
   Navigate,
   Route,
   Routes,
 } from 'react-router'
 
 import { routes } from './routes'
-import Layout from './components/layout/Layout'
-import ActivateAccount from './pages/auth/ActivateAccount'
 
 import {
   AuthProvider,
   useAuth,
 } from './context/AuthContext'
+
+const Layout =
+  lazy(() =>
+    import('./components/layout/Layout'),
+  )
+
+const ActivateAccount =
+  lazy(() =>
+    import('./pages/auth/ActivateAccount'),
+  )
+
+
+function LoadingScreen() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-100">
+      <p className="text-slate-500">
+        Cargando...
+      </p>
+    </div>
+  )
+}
+
 
 function AppRouter() {
   const {
@@ -21,86 +46,132 @@ function AppRouter() {
   } = useAuth()
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-100">
-        <p className="text-slate-500">Cargando...</p>
-      </div>
-    )
+    return <LoadingScreen />
   }
 
-  const publicRoutes = routes.filter((route) => !route.private)
-  const privateRoutes = routes.filter((route) => route.private)
+  const publicRoutes =
+    routes.filter(
+      (route) =>
+        !route.private,
+    )
 
-  const authenticatedHome = isAuthorized
-    ? '/productos'
-    : '/activar'
+  const privateRoutes =
+    routes.filter(
+      (route) =>
+        route.private,
+    )
+
+  const authenticatedHome =
+    isAuthorized
+      ? '/productos'
+      : '/activar'
 
   return (
-    <Routes>
-      {publicRoutes.map((route) => (
+    <Suspense
+      fallback={
+        <LoadingScreen />
+      }
+    >
+      <Routes>
+        {publicRoutes.map(
+          (route) => (
+            <Route
+              key={route.path}
+              path={route.path}
+              element={
+                route.restricted &&
+                isAuthenticated ? (
+                  <Navigate
+                    to={
+                      authenticatedHome
+                    }
+                    replace
+                  />
+                ) : (
+                  <route.component />
+                )
+              }
+            />
+          ),
+        )}
+
         <Route
-          key={route.path}
-          path={route.path}
+          path="/activar"
           element={
-            route.restricted && isAuthenticated ? (
-              <Navigate to={authenticatedHome} replace />
+            !isAuthenticated ? (
+              <Navigate
+                to="/login"
+                replace
+              />
+            ) : isAuthorized ? (
+              <Navigate
+                to="/productos"
+                replace
+              />
             ) : (
-              <route.component />
+              <ActivateAccount />
             )
           }
         />
-      ))}
 
-      <Route
-        path="/activar"
-        element={
-          !isAuthenticated ? (
-            <Navigate to="/login" replace />
-          ) : isAuthorized ? (
-            <Navigate to="/productos" replace />
-          ) : (
-            <ActivateAccount />
-          )
-        }
-      />
+        <Route
+          element={
+            !isAuthenticated ? (
+              <Navigate
+                to="/login"
+                replace
+              />
+            ) : !isAuthorized ? (
+              <Navigate
+                to="/activar"
+                replace
+              />
+            ) : (
+              <Layout />
+            )
+          }
+        >
+          {privateRoutes.map(
+            (route) => (
+              <Route
+                key={route.path}
+                path={route.path}
+                element={
+                  <route.component />
+                }
+              />
+            ),
+          )}
+        </Route>
 
-      <Route
-        element={
-          !isAuthenticated ? (
-            <Navigate to="/login" replace />
-          ) : !isAuthorized ? (
-            <Navigate to="/activar" replace />
-          ) : (
-            <Layout />
-          )
-        }
-      >
-        {privateRoutes.map((route) => (
-          <Route
-            key={route.path}
-            path={route.path}
-            element={<route.component />}
-          />
-        ))}
-      </Route>
+        <Route
+          path="/"
+          element={
+            <Navigate
+              to={
+                isAuthenticated
+                  ? authenticatedHome
+                  : '/login'
+              }
+              replace
+            />
+          }
+        />
 
-      <Route
-        path="/"
-        element={
-          <Navigate
-            to={isAuthenticated ? authenticatedHome : '/login'}
-            replace
-          />
-        }
-      />
-
-      <Route
-        path="*"
-        element={<Navigate to="/" replace />}
-      />
-    </Routes>
+        <Route
+          path="*"
+          element={
+            <Navigate
+              to="/"
+              replace
+            />
+          }
+        />
+      </Routes>
+    </Suspense>
   )
 }
+
 
 function App() {
   return (
