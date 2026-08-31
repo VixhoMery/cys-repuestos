@@ -92,7 +92,7 @@ export function printSaleReceipt(
 
         <style>
           @page {
-            margin: 3mm;
+            margin: 2mm;
           }
 
           * {
@@ -108,7 +108,7 @@ export function printSaleReceipt(
           }
 
           body {
-            width: 100%;
+            width: 54mm;
             font-family:
               "DejaVu Sans Mono",
               "Liberation Mono",
@@ -118,8 +118,8 @@ export function printSaleReceipt(
           }
 
           .receipt {
-            width: 100%;
-            max-width: 72mm;
+            width: 54mm;
+            max-width: 54mm;
             margin: 0 auto;
           }
 
@@ -156,7 +156,12 @@ export function printSaleReceipt(
           .row {
             display: flex;
             justify-content: space-between;
-            gap: 8px;
+            gap: 6px;
+          }
+
+          .row span:last-child {
+            flex-shrink: 0;
+            text-align: right;
           }
 
           .item {
@@ -189,12 +194,15 @@ export function printSaleReceipt(
           }
 
           @media print {
+            html,
             body {
-              width: 100%;
+              width: 54mm;
             }
 
             .receipt {
-              max-width: none;
+              width: 54mm;
+              max-width: 54mm;
+              margin: 0;
             }
           }
         </style>
