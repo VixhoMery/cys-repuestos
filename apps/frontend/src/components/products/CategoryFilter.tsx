@@ -55,7 +55,7 @@ function CategoryFilter({
   const visibleCategoryNames =
     showAllCategories
       ? categoryNames
-      : categoryNames.slice(0, 7)
+      : categoryNames.slice(0, 5)
 
   return (
     <aside className="w-full lg:w-56">
