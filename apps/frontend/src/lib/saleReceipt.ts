@@ -92,8 +92,7 @@ export function printSaleReceipt(
 
         <style>
           @page {
-            size: 58mm auto;
-            margin: 2mm;
+            margin: 0;
           }
 
           * {
@@ -104,24 +103,25 @@ export function printSaleReceipt(
           body {
             margin: 0;
             padding: 0;
+            width: 100%;
             background: #fff;
             color: #000;
           }
 
           body {
-            width: 50mm;
             font-family:
               "DejaVu Sans Mono",
               "Liberation Mono",
               monospace;
-            font-size: 10.5px;
+            font-size: 10px;
             line-height: 1.35;
           }
 
           .receipt {
-            width: 50mm;
-            max-width: 50mm;
+            width: calc(100% - 4mm);
+            max-width: 48mm;
             margin: 0 auto;
+            padding: 2mm 0;
           }
 
           .center {
@@ -157,7 +157,12 @@ export function printSaleReceipt(
           .row {
             display: flex;
             justify-content: space-between;
-            gap: 6px;
+            gap: 4px;
+          }
+
+          .row span:first-child {
+            min-width: 0;
+            overflow-wrap: anywhere;
           }
 
           .row span:last-child {
@@ -197,13 +202,16 @@ export function printSaleReceipt(
           @media print {
             html,
             body {
-              width: 50mm;
+              width: 100%;
+              margin: 0;
+              padding: 0;
             }
 
             .receipt {
-              width: 50mm;
-              max-width: 50mm;
-              margin: 0;
+              width: calc(100% - 4mm);
+              max-width: 48mm;
+              margin-left: auto;
+              margin-right: auto;
             }
           }
         </style>
