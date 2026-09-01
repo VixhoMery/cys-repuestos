@@ -1,4 +1,6 @@
-import { supabase } from '../lib/supabase'
+import {
+  supabase,
+} from '../lib/supabase'
 
 export type StaffRole =
   | 'admin'
@@ -27,24 +29,31 @@ type ManageUsersResponse = {
   message?: string
   users?: ManagedUser[]
   user?: ManagedUser
+  deletedUserId?: string
 }
 
 async function invokeManageUsers(
-  body: Record<string, unknown>,
+  body:
+    Record<
+      string,
+      unknown
+    >,
 ) {
   const {
     data,
     error,
-  } = await supabase.functions.invoke(
-    'manage-users',
-    {
-      body,
-    },
-  )
+  } =
+    await supabase.functions
+      .invoke(
+        'manage-users',
+        {
+          body,
+        },
+      )
 
   if (error) {
     console.error(
-      'Error manage-users:',
+      'Error invocando manage-users:',
       error,
     )
 
@@ -55,11 +64,13 @@ async function invokeManageUsers(
   }
 
   const result =
-    data as ManageUsersResponse | null
+    data as
+      | ManageUsersResponse
+      | null
 
   if (!result) {
     throw new Error(
-      'Supabase no devolvió una respuesta válida.',
+      'La administración de usuarios no devolvió una respuesta.',
     )
   }
 
@@ -69,10 +80,14 @@ async function invokeManageUsers(
 export async function getManagedUsers() {
   const result =
     await invokeManageUsers({
-      action: 'list',
+      action:
+        'list',
     })
 
-  return result.users ?? []
+  return (
+    result.users ??
+    []
+  )
 }
 
 export async function inviteStaffUser(
@@ -83,10 +98,32 @@ export async function inviteStaffUser(
     receivesMonthlyReport: boolean
   },
 ) {
-  return invokeManageUsers({
-    action: 'invite',
-    ...input,
-  })
+  const result =
+    await invokeManageUsers({
+      action:
+        'invite',
+
+      fullName:
+        input.fullName,
+
+      email:
+        input.email,
+
+      role:
+        input.role,
+
+      receivesMonthlyReport:
+        input.receivesMonthlyReport,
+    })
+
+  if (!result.user) {
+    throw new Error(
+      result.message ||
+        'No fue posible crear el usuario.',
+    )
+  }
+
+  return result.user
 }
 
 export async function updateStaffUser(
@@ -98,20 +135,75 @@ export async function updateStaffUser(
     receivesMonthlyReport: boolean
   },
 ) {
-  return invokeManageUsers({
-    action: 'update',
-    ...input,
-  })
+  const result =
+    await invokeManageUsers({
+      action:
+        'update',
+
+      userId:
+        input.userId,
+
+      fullName:
+        input.fullName,
+
+      role:
+        input.role,
+
+      active:
+        input.active,
+
+      receivesMonthlyReport:
+        input.receivesMonthlyReport,
+    })
+
+  return (
+    result.message ??
+    'Usuario actualizado correctamente.'
+  )
 }
 
 export async function setReportRecipient(
   userId: string,
   enabled: boolean,
 ) {
-  return invokeManageUsers({
-    action:
-      'set-report-recipient',
-    userId,
-    enabled,
-  })
+  const result =
+    await invokeManageUsers({
+      action:
+        'set-report-recipient',
+
+      userId,
+      enabled,
+    })
+
+  return (
+    result.message ??
+    'Destinatario actualizado correctamente.'
+  )
+}
+
+export async function deleteManagedUser(
+  userId: string,
+) {
+  const result =
+    await invokeManageUsers({
+      action:
+        'delete',
+
+      userId,
+    })
+
+  if (
+    result.deletedUserId &&
+    result.deletedUserId !==
+      userId
+  ) {
+    throw new Error(
+      'La respuesta de eliminación no corresponde al usuario solicitado.',
+    )
+  }
+
+  return (
+    result.message ??
+    'Usuario eliminado correctamente.'
+  )
 }
