@@ -54,7 +54,9 @@ function resolveProductImageUrl(
     const { data } =
       supabase.storage
         .from('product-images')
-        .getPublicUrl(image.storagePath)
+        .getPublicUrl(
+          image.storagePath,
+        )
 
     return data.publicUrl
   }
@@ -67,25 +69,39 @@ function normalizeProduct(
 ): Product {
   const images =
     [...(product.images ?? [])]
-      .sort((a, b) =>
-        a.position - b.position,
+      .sort(
+        (a, b) =>
+          a.position -
+          b.position,
       )
-      .map((image) => ({
-        ...image,
-        url: resolveProductImageUrl(image),
-      }))
-      .filter((image) => image.url)
+      .map(
+        (image) => ({
+          ...image,
+          url:
+            resolveProductImageUrl(
+              image,
+            ),
+        }),
+      )
+      .filter(
+        (image) =>
+          image.url,
+      )
 
   return {
     ...product,
     supplierId:
-      product.supplierId ?? null,
+      product.supplierId ??
+      null,
     supplierName:
-      product.supplierName ?? null,
+      product.supplierName ??
+      null,
     location:
-      product.location ?? null,
+      product.location ??
+      null,
     images,
-    image: images[0]?.url,
+    image:
+      images[0]?.url,
   }
 }
 
@@ -132,7 +148,8 @@ export type GetProductsParams = {
 
 type ApiProductListResponse = {
   data: ApiProduct[]
-  pagination: ProductPagination
+  pagination:
+    ProductPagination
 }
 
 export async function getProducts(
@@ -142,12 +159,18 @@ export async function getProducts(
     await supabase.rpc(
       'cys_list_products',
       {
-        p_page: params.page ?? 1,
-        p_limit: params.limit ?? 25,
+        p_page:
+          params.page ?? 1,
+        p_limit:
+          params.limit ?? 25,
         p_search:
-          params.search?.trim() || null,
+          params.search
+            ?.trim() ||
+          null,
         p_category:
-          params.category?.trim() || null,
+          params.category
+            ?.trim() ||
+          null,
       },
     )
 
@@ -159,7 +182,9 @@ export async function getProducts(
   }
 
   const result =
-    data as ApiProductListResponse | null
+    data as
+      | ApiProductListResponse
+      | null
 
   if (!result) {
     throw new Error(
@@ -168,10 +193,12 @@ export async function getProducts(
   }
 
   return {
-    data: result.data.map(
-      normalizeProduct,
-    ),
-    pagination: result.pagination,
+    data:
+      result.data.map(
+        normalizeProduct,
+      ),
+    pagination:
+      result.pagination,
   }
 }
 
@@ -181,7 +208,9 @@ export async function getProductById(
   const { data, error } =
     await supabase.rpc(
       'cys_get_product',
-      { p_id: id },
+      {
+        p_id: id,
+      },
     )
 
   if (error) {
@@ -209,19 +238,37 @@ export async function createProduct(
     await supabase.rpc(
       'cys_create_product',
       {
-        p_name: product.name,
-        p_brand: product.brand,
-        p_sku: product.sku,
-        p_category: product.category,
+        p_name:
+          product.name,
+        p_brand:
+          product.brand,
+        p_sku:
+          product.sku,
+        p_category:
+          product.category,
+
         p_supplier_id:
-          product.supplierId ?? null,
+          product.supplierId ??
+          null,
+
         p_location:
-          product.location?.trim() || null,
-        p_net_price: product.netPrice,
-        p_price: product.price,
-        p_stock: product.stock,
+          product.location
+            ?.trim() ||
+          null,
+
+        p_net_price:
+          product.netPrice,
+
+        p_price:
+          product.price,
+
+        p_stock:
+          product.stock,
+
         p_short_description:
-          product.shortDescription,
+          product
+            .shortDescription,
+
         p_description:
           product.description,
       },
@@ -253,20 +300,43 @@ export async function updateProduct(
     await supabase.rpc(
       'cys_update_product',
       {
-        p_id: id,
-        p_name: product.name,
-        p_brand: product.brand,
-        p_sku: product.sku,
-        p_category: product.category,
+        p_id:
+          id,
+
+        p_name:
+          product.name,
+
+        p_brand:
+          product.brand,
+
+        p_sku:
+          product.sku,
+
+        p_category:
+          product.category,
+
         p_supplier_id:
-          product.supplierId ?? null,
+          product.supplierId ??
+          null,
+
         p_location:
-          product.location?.trim() || null,
-        p_net_price: product.netPrice,
-        p_price: product.price,
-        p_stock: product.stock,
+          product.location
+            ?.trim() ||
+          null,
+
+        p_net_price:
+          product.netPrice,
+
+        p_price:
+          product.price,
+
+        p_stock:
+          product.stock,
+
         p_short_description:
-          product.shortDescription,
+          product
+            .shortDescription,
+
         p_description:
           product.description,
       },
@@ -298,8 +368,10 @@ export async function replaceProductImages(
     await supabase.rpc(
       'cys_replace_product_images',
       {
-        p_product_id: id,
-        p_images: images,
+        p_product_id:
+          id,
+        p_images:
+          images,
       },
     )
 
@@ -317,7 +389,9 @@ export async function deleteProduct(
   const { data, error } =
     await supabase.rpc(
       'cys_delete_product',
-      { p_id: id },
+      {
+        p_id: id,
+      },
     )
 
   if (error) {
@@ -332,4 +406,49 @@ export async function deleteProduct(
       'El producto no existe.',
     )
   }
+}
+
+export async function updateInventory(
+  id: number,
+  input: {
+    stock: number
+    location: string | null
+  },
+) {
+  const {
+    data,
+    error,
+  } =
+    await supabase.rpc(
+      'cys_update_inventory',
+      {
+        p_id:
+          id,
+
+        p_stock:
+          input.stock,
+
+        p_location:
+          input.location
+            ?.trim() ||
+          null,
+      },
+    )
+
+  if (error) {
+    throwRpcError(
+      'actualizar el inventario',
+      error,
+    )
+  }
+
+  if (!data) {
+    throw new Error(
+      'El producto no existe.',
+    )
+  }
+
+  return normalizeProduct(
+    data as ApiProduct,
+  )
 }

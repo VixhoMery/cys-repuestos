@@ -1,6 +1,16 @@
-import { useState } from 'react'
-import { MoreVertical, Pencil, Trash2 } from 'lucide-react'
-import { useNavigate } from 'react-router'
+import {
+  useState,
+} from 'react'
+
+import {
+  MoreVertical,
+  Pencil,
+  Trash2,
+} from 'lucide-react'
+
+import {
+  useNavigate,
+} from 'react-router'
 
 type ProductCardProps = {
   id: number
@@ -10,7 +20,11 @@ type ProductCardProps = {
   stock: number
   shortDescription: string
   image?: string
-  onDelete: (
+
+  canEdit?: boolean
+  canDelete?: boolean
+
+  onDelete?: (
     id: number,
     name: string,
   ) => void
@@ -24,13 +38,33 @@ function ProductCard({
   stock,
   shortDescription,
   image,
+  canEdit = false,
+  canDelete = false,
   onDelete,
 }: ProductCardProps) {
-  const navigate = useNavigate()
-  const [menuOpen, setMenuOpen] = useState(false)
+  const navigate =
+    useNavigate()
+
+  const [
+    menuOpen,
+    setMenuOpen,
+  ] =
+    useState(false)
+
+  const showMenu =
+    canEdit ||
+    (
+      canDelete &&
+      !!onDelete
+    )
+
   return (
     <article
-      onClick={() => navigate(`/productos/${id}`)}
+      onClick={() =>
+        navigate(
+          `/productos/${id}`,
+        )
+      }
       className="
         group relative cursor-pointer
         overflow-visible rounded-xl
@@ -57,6 +91,7 @@ function ProductCard({
           </div>
         )}
       </div>
+
       <div className="relative p-4">
         <div className="flex items-start justify-between gap-2">
           <div>
@@ -68,82 +103,128 @@ function ProductCard({
               {name}
             </h3>
           </div>
-          <div className="relative">
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation()
-                setMenuOpen((open) => !open)
-              }}
-              className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-              aria-label="Opciones del producto"
-            >
-              <MoreVertical size={19} />
-            </button>
-            {menuOpen && (
-              <div
-                onClick={(event) => event.stopPropagation()}
-                className="
-                  absolute right-0 top-9 z-20
-                  w-44 overflow-hidden
-                  rounded-lg border border-slate-200
-                  bg-white shadow-lg
-                "
+
+          {showMenu && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={(
+                  event,
+                ) => {
+                  event.stopPropagation()
+
+                  setMenuOpen(
+                    (open) =>
+                      !open,
+                  )
+                }}
+                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Opciones del producto"
               >
-                <button
-                  type="button"
-                  onClick={() =>
-                    navigate(`/productos/${id}/editar`)
+                <MoreVertical
+                  size={19}
+                />
+              </button>
+
+              {menuOpen && (
+                <div
+                  onClick={(
+                    event,
+                  ) =>
+                    event.stopPropagation()
                   }
                   className="
-                    flex w-full items-center gap-2
-                    px-4 py-3 text-left
-                    text-sm text-slate-700
-                    transition hover:bg-slate-100
+                    absolute right-0 top-9 z-20
+                    w-44 overflow-hidden
+                    rounded-lg border border-slate-200
+                    bg-white shadow-lg
                   "
                 >
-                  <Pencil size={16} />
-                  Editar producto
-                </button>
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        navigate(
+                          `/productos/${id}/editar`,
+                        )
+                      }
+                      className="
+                        flex w-full items-center gap-2
+                        px-4 py-3 text-left
+                        text-sm text-slate-700
+                        transition hover:bg-slate-100
+                      "
+                    >
+                      <Pencil
+                        size={16}
+                      />
 
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    setMenuOpen(false)
-                    onDelete(
-                      id,
-                      name,
-                    )
-                  }}
-                  className="
-                    flex w-full items-center gap-2
-                    border-t border-slate-100
-                    px-4 py-3 text-left
-                    text-sm text-red-600
-                    transition hover:bg-red-50
-                  "
-                >
-                  <Trash2 size={16} />
-                  Eliminar producto
-                </button>
-              </div>
-            )}
-          </div>
+                      Editar producto
+                    </button>
+                  )}
+
+                  {canDelete &&
+                    onDelete && (
+                      <button
+                        type="button"
+                        onClick={(
+                          event,
+                        ) => {
+                          event.stopPropagation()
+
+                          setMenuOpen(
+                            false,
+                          )
+
+                          onDelete(
+                            id,
+                            name,
+                          )
+                        }}
+                        className={`
+                          flex w-full items-center gap-2
+                          px-4 py-3 text-left
+                          text-sm text-red-600
+                          transition hover:bg-red-50
+
+                          ${
+                            canEdit
+                              ? 'border-t border-slate-100'
+                              : ''
+                          }
+                        `}
+                      >
+                        <Trash2
+                          size={16}
+                        />
+
+                        Eliminar producto
+                      </button>
+                    )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <p className="mt-3 text-xl font-bold text-slate-900">
-          ${price.toLocaleString('es-CL')}
+          $
+          {price.toLocaleString(
+            'es-CL',
+          )}
         </p>
 
         <p className="mt-2 line-clamp-2 text-sm text-slate-500">
           {shortDescription}
         </p>
+
         <div className="mt-4">
           <span
             className={`
-              inline-flex rounded-full px-2.5 py-1
+              inline-flex rounded-full
+              px-2.5 py-1
               text-xs font-medium
+
               ${
                 stock === 0
                   ? 'bg-red-100 text-red-700'
@@ -153,11 +234,14 @@ function ProductCard({
               }
             `}
           >
-            {stock === 0 ? 'Sin stock' : `Stock: ${stock}`}
+            {stock === 0
+              ? 'Sin stock'
+              : `Stock: ${stock}`}
           </span>
         </div>
       </div>
     </article>
   )
 }
+
 export default ProductCard

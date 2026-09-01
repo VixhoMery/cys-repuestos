@@ -1,4 +1,7 @@
-import { useState } from "react";
+import {
+  useState,
+} from "react";
+
 import {
   NavLink,
   useNavigate,
@@ -23,13 +26,18 @@ import {
 } from "../../context/AuthContext";
 
 function Sidebar() {
-  const [isOpen, setIsOpen] =
+  const [
+    isOpen,
+    setIsOpen,
+  ] =
     useState(true);
 
   const {
     logout,
     user,
     profile,
+    hasPermission,
+    isManagementUser,
   } = useAuth();
 
   const navigate =
@@ -39,12 +47,20 @@ function Sidebar() {
     user?.email ?? "";
 
   const metadataName =
-    typeof user?.user_metadata
-      ?.full_name === "string"
-      ? user.user_metadata.full_name.trim()
-      : typeof user?.user_metadata
-            ?.name === "string"
-        ? user.user_metadata.name.trim()
+    typeof user
+      ?.user_metadata
+      ?.full_name ===
+      "string"
+      ? user.user_metadata
+          .full_name
+          .trim()
+      : typeof user
+            ?.user_metadata
+            ?.name ===
+          "string"
+        ? user.user_metadata
+            .name
+            .trim()
         : "";
 
   const emailName =
@@ -57,13 +73,18 @@ function Sidebar() {
           )
           .replace(
             /\b\w/g,
-            (letter) =>
-              letter.toUpperCase(),
+            (
+              letter,
+            ) =>
+              letter
+                .toUpperCase(),
           )
       : "Usuario";
 
   const displayName =
-    profile?.full_name?.trim() ||
+    profile
+      ?.full_name
+      ?.trim() ||
     metadataName ||
     emailName;
 
@@ -74,7 +95,8 @@ function Sidebar() {
       .slice(0, 2)
       .map(
         (part) =>
-          part[0]?.toUpperCase(),
+          part[0]
+            ?.toUpperCase(),
       )
       .join("");
 
@@ -82,43 +104,83 @@ function Sidebar() {
     async () => {
       await logout();
 
-      navigate("/login");
+      navigate(
+        "/login",
+      );
     };
 
-  const navItems = [
-    {
-      to: "/productos",
-      label: "Productos",
-      icon: Package,
-    },
-    {
-      to: "/pos",
-      label: "Punto de Venta",
-      icon: ShoppingCart,
-    },
-    {
-      to: "/ventas",
-      label: "Ventas",
-      icon: ReceiptText,
-    },
-    {
-      to: "/estadisticas",
-      label: "Estadísticas",
-      icon: ChartNoAxesCombined,
-    },
-  ];
+  const navItems = [];
 
-  const canManageUsers =
-    profile?.account_type ===
-      "owner" ||
-    profile?.account_type ===
-      "developer";
-
-  if (canManageUsers) {
+  if (
+    hasPermission(
+      "products.read",
+    )
+  ) {
     navItems.push({
-      to: "/usuarios",
-      label: "Usuarios",
-      icon: UsersRound,
+      to:
+        "/productos",
+      label:
+        "Productos",
+      icon:
+        Package,
+    });
+  }
+
+  if (
+    hasPermission(
+      "sales.create",
+    )
+  ) {
+    navItems.push({
+      to:
+        "/pos",
+      label:
+        "Punto de Venta",
+      icon:
+        ShoppingCart,
+    });
+  }
+
+  if (
+    hasPermission(
+      "sales.read",
+    )
+  ) {
+    navItems.push({
+      to:
+        "/ventas",
+      label:
+        "Ventas",
+      icon:
+        ReceiptText,
+    });
+  }
+
+  if (
+    hasPermission(
+      "statistics.read",
+    )
+  ) {
+    navItems.push({
+      to:
+        "/estadisticas",
+      label:
+        "Estadísticas",
+      icon:
+        ChartNoAxesCombined,
+    });
+  }
+
+  if (
+    isManagementUser
+  ) {
+    navItems.push({
+      to:
+        "/usuarios",
+      label:
+        "Usuarios",
+      icon:
+        UsersRound,
     });
   }
 
@@ -157,7 +219,6 @@ function Sidebar() {
       >
         {isOpen ? (
           <div className="flex items-center gap-3">
-            {/* Logo */}
             <div
               className="
                 flex h-11 w-11
@@ -180,7 +241,6 @@ function Sidebar() {
               />
             </div>
 
-            {/* Nombre empresa */}
             <div>
               <h1 className="text-lg font-bold leading-tight">
                 C&S Repuestos
@@ -214,13 +274,14 @@ function Sidebar() {
           </div>
         )}
 
-        {/* Botón contraer */}
         {isOpen && (
           <button
             type="button"
             onClick={() =>
               setIsOpen(
-                (current) =>
+                (
+                  current,
+                ) =>
                   !current,
               )
             }
@@ -235,18 +296,21 @@ function Sidebar() {
             aria-label="Contraer menú"
           >
             <ChevronLeft
-              size={22}
+              size={
+                22
+              }
             />
           </button>
         )}
       </div>
 
-      {/* Botón expandir */}
       {!isOpen && (
         <button
           type="button"
           onClick={() =>
-            setIsOpen(true)
+            setIsOpen(
+              true,
+            )
           }
           className="
             mx-auto mt-2
@@ -260,7 +324,9 @@ function Sidebar() {
           aria-label="Expandir menú"
         >
           <ChevronRight
-            size={20}
+            size={
+              20
+            }
           />
         </button>
       )}
@@ -280,8 +346,12 @@ function Sidebar() {
 
             return (
               <NavLink
-                key={item.to}
-                to={item.to}
+                key={
+                  item.to
+                }
+                to={
+                  item.to
+                }
                 title={
                   !isOpen
                     ? item.label
@@ -290,7 +360,8 @@ function Sidebar() {
                 className={({
                   isActive,
                 }) => `
-                  flex items-center
+                  flex
+                  items-center
                   gap-3
                   rounded-lg
                   px-4 py-3
@@ -311,13 +382,17 @@ function Sidebar() {
                 `}
               >
                 <Icon
-                  size={22}
+                  size={
+                    22
+                  }
                   className="shrink-0"
                 />
 
                 {isOpen && (
                   <span className="whitespace-nowrap">
-                    {item.label}
+                    {
+                      item.label
+                    }
                   </span>
                 )}
               </NavLink>
@@ -337,7 +412,8 @@ function Sidebar() {
         {isOpen ? (
           <div
             className="
-              flex items-center
+              flex
+              items-center
               gap-3
               rounded-xl
               border
@@ -362,7 +438,9 @@ function Sidebar() {
             >
               {initials || (
                 <UserRound
-                  size={19}
+                  size={
+                    19
+                  }
                 />
               )}
             </div>
@@ -379,7 +457,9 @@ function Sidebar() {
                   displayName
                 }
               >
-                {displayName}
+                {
+                  displayName
+                }
               </p>
 
               <p
@@ -389,9 +469,13 @@ function Sidebar() {
                   text-xs
                   text-slate-400
                 "
-                title={email}
+                title={
+                  email
+                }
               >
-                {email}
+                {
+                  email
+                }
               </p>
             </div>
 
@@ -416,7 +500,9 @@ function Sidebar() {
               "
             >
               <LogOut
-                size={19}
+                size={
+                  19
+                }
               />
             </button>
           </div>
@@ -441,7 +527,9 @@ function Sidebar() {
             >
               {initials || (
                 <UserRound
-                  size={18}
+                  size={
+                    18
+                  }
                 />
               )}
             </div>
@@ -466,7 +554,9 @@ function Sidebar() {
               "
             >
               <LogOut
-                size={20}
+                size={
+                  20
+                }
               />
             </button>
           </div>

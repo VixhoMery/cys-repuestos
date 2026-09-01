@@ -21,7 +21,20 @@ export type UserRole =
 export type AccountType =
   | 'pending'
   | 'owner'
+  | 'staff'
   | 'developer'
+
+export type AppPermission =
+  | 'products.read'
+  | 'products.create'
+  | 'products.update'
+  | 'products.delete'
+  | 'inventory.update'
+  | 'categories.manage'
+  | 'suppliers.manage'
+  | 'sales.create'
+  | 'sales.read'
+  | 'statistics.read'
 
 export type Profile = {
   id: string
@@ -29,6 +42,7 @@ export type Profile = {
   role: UserRole
   active: boolean
   account_type: AccountType
+  receives_monthly_report?: boolean
   created_at: string
   updated_at: string
 }
@@ -37,9 +51,11 @@ type AuthResult = {
   error: string | null
 }
 
-type RegisterResult = AuthResult & {
-  needsEmailConfirmation: boolean
-}
+type RegisterResult =
+  AuthResult & {
+    needsEmailConfirmation:
+      boolean
+  }
 
 type AuthContextType = {
   user: User | null
@@ -48,184 +64,230 @@ type AuthContextType = {
   isAuthenticated: boolean
   isAuthorized: boolean
   isPending: boolean
+  isManagementUser: boolean
   loading: boolean
+
+  hasPermission: (
+    permission: AppPermission,
+  ) => boolean
+
   login: (
     email: string,
     password: string,
   ) => Promise<AuthResult>
+
   registerAccount: (
     fullName: string,
     email: string,
     password: string,
   ) => Promise<RegisterResult>
-  loginWithGoogle: () => Promise<AuthResult>
-  logout: () => Promise<void>
-  refreshProfile: () => Promise<void>
+
+  loginWithGoogle:
+    () => Promise<AuthResult>
+
+  logout:
+    () => Promise<void>
+
+  refreshProfile:
+    () => Promise<void>
 }
 
 const AuthContext =
-  createContext<AuthContextType | undefined>(undefined)
+  createContext<
+    AuthContextType | undefined
+  >(undefined)
 
 type AuthProviderProps = {
   children: ReactNode
 }
 
-export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<User | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [loading, setLoading] = useState(true)
+export function AuthProvider({
+  children,
+}: AuthProviderProps) {
+  const [user, setUser] =
+    useState<User | null>(
+      null,
+    )
 
-  const loadProfile = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select(
-        'id, full_name, role, active, account_type, created_at, updated_at',
+  const [session, setSession] =
+    useState<Session | null>(
+      null,
+    )
+
+  const [profile, setProfile] =
+    useState<Profile | null>(
+      null,
+    )
+
+  const [loading, setLoading] =
+    useState(true)
+
+  const loadProfile =
+    async (
+      userId: string,
+    ) => {
+      const {
+        data,
+        error,
+      } =
+        await supabase
+          .from('profiles')
+          .select(
+            `
+              id,
+              full_name,
+              role,
+              active,
+              account_type,
+              receives_monthly_report,
+              created_at,
+              updated_at
+            `,
+          )
+          .eq(
+            'id',
+            userId,
+          )
+          .single()
+
+      if (error) {
+        console.error(
+          'Error cargando perfil:',
+          error,
+        )
+
+        setProfile(null)
+        return
+      }
+
+      setProfile(
+        data as Profile,
       )
-      .eq('id', userId)
-      .single()
-
-    if (error) {
-      console.error('Error cargando perfil:', error)
-      setProfile(null)
-      return
     }
 
-    setProfile(data as Profile)
-  }
+  const refreshProfile =
+    async () => {
+      if (!user) {
+        setProfile(null)
+        return
+      }
 
-  const refreshProfile = async () => {
-    if (!user) {
-      setProfile(null)
-      return
+      await loadProfile(
+        user.id,
+      )
     }
-
-    await loadProfile(user.id)
-  }
 
   useEffect(() => {
-    const loadInitialSession = async () => {
-      try {
-        const {
-          data: { session: initialSession },
-        } = await supabase.auth.getSession()
+    const loadInitialSession =
+      async () => {
+        try {
+          const {
+            data: {
+              session:
+                initialSession,
+            },
+          } =
+            await supabase
+              .auth
+              .getSession()
 
-        setSession(initialSession)
+          setSession(
+            initialSession,
+          )
 
-        const currentUser =
-          initialSession?.user ?? null
+          const currentUser =
+            initialSession
+              ?.user ??
+            null
 
-        setUser(currentUser)
+          setUser(
+            currentUser,
+          )
 
-        if (currentUser) {
-          await loadProfile(currentUser.id)
-        } else {
+          if (currentUser) {
+            await loadProfile(
+              currentUser.id,
+            )
+          } else {
+            setProfile(
+              null,
+            )
+          }
+        } catch (error) {
+          console.error(
+            'Error cargando sesión:',
+            error,
+          )
+
+          setSession(null)
+          setUser(null)
           setProfile(null)
+        } finally {
+          setLoading(false)
         }
-      } catch (error) {
-        console.error('Error cargando sesión:', error)
-        setSession(null)
-        setUser(null)
-        setProfile(null)
-      } finally {
-        setLoading(false)
       }
-    }
 
     void loadInitialSession()
 
     const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => {
-        setSession(newSession)
-
-        const currentUser =
-          newSession?.user ?? null
-
-        setUser(currentUser)
-
-        if (currentUser) {
-          void loadProfile(currentUser.id)
-        } else {
-          setProfile(null)
-        }
+      data: {
+        subscription,
       },
-    )
+    } =
+      supabase.auth
+        .onAuthStateChange(
+          (
+            _event,
+            newSession,
+          ) => {
+            setSession(
+              newSession,
+            )
+
+            const currentUser =
+              newSession
+                ?.user ??
+              null
+
+            setUser(
+              currentUser,
+            )
+
+            if (
+              currentUser
+            ) {
+              void loadProfile(
+                currentUser.id,
+              )
+            } else {
+              setProfile(
+                null,
+              )
+            }
+          },
+        )
 
     return () => {
-      subscription.unsubscribe()
+      subscription
+        .unsubscribe()
     }
   }, [])
 
-  const login = async (
-    email: string,
-    password: string,
-  ) => {
-    const { error } =
-      await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      })
-
-    return {
-      error:
-        error
-          ? error.message
-          : null,
-    }
-  }
-
-  const registerAccount = async (
-    fullName: string,
-    email: string,
-    password: string,
-  ): Promise<RegisterResult> => {
-    const {
-      data,
-      error,
-    } =
-      await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          data: {
-            full_name:
-              fullName.trim(),
-          },
-          emailRedirectTo:
-            `${window.location.origin}/`,
-        },
-      })
-
-    if (error) {
-      return {
-        error:
-          error.message,
-        needsEmailConfirmation:
-          false,
-      }
-    }
-
-    return {
-      error: null,
-      needsEmailConfirmation:
-        !data.session,
-    }
-  }
-
-  const loginWithGoogle =
-    async (): Promise<AuthResult> => {
+  const login =
+    async (
+      email: string,
+      password: string,
+    ) => {
       const {
         error,
       } =
-        await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo:
-              `${window.location.origin}/`,
-          },
-        })
+        await supabase
+          .auth
+          .signInWithPassword({
+            email:
+              email.trim(),
+            password,
+          })
 
       return {
         error:
@@ -235,22 +297,95 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     }
 
-  const logout = async () => {
-    const { error } =
-      await supabase.auth.signOut()
-
-    if (error) {
-      console.error(
-        'Error cerrando sesión:',
+  const registerAccount =
+    async (
+      fullName: string,
+      email: string,
+      password: string,
+    ): Promise<RegisterResult> => {
+      const {
+        data,
         error,
-      )
-      return
+      } =
+        await supabase
+          .auth
+          .signUp({
+            email:
+              email.trim(),
+            password,
+            options: {
+              data: {
+                full_name:
+                  fullName
+                    .trim(),
+              },
+              emailRedirectTo:
+                `${window.location.origin}/`,
+            },
+          })
+
+      if (error) {
+        return {
+          error:
+            error.message,
+          needsEmailConfirmation:
+            false,
+        }
+      }
+
+      return {
+        error: null,
+        needsEmailConfirmation:
+          !data.session,
+      }
     }
 
-    setSession(null)
-    setUser(null)
-    setProfile(null)
-  }
+  const loginWithGoogle =
+    async (): Promise<AuthResult> => {
+      const {
+        error,
+      } =
+        await supabase
+          .auth
+          .signInWithOAuth({
+            provider:
+              'google',
+            options: {
+              redirectTo:
+                `${window.location.origin}/`,
+            },
+          })
+
+      return {
+        error:
+          error
+            ? error.message
+            : null,
+      }
+    }
+
+  const logout =
+    async () => {
+      const {
+        error,
+      } =
+        await supabase
+          .auth
+          .signOut()
+
+      if (error) {
+        console.error(
+          'Error cerrando sesión:',
+          error,
+        )
+
+        return
+      }
+
+      setSession(null)
+      setUser(null)
+      setProfile(null)
+    }
 
   const isAuthenticated =
     !!user
@@ -263,13 +398,92 @@ export function AuthProvider({ children }: AuthProviderProps) {
       profile.account_type ===
         'owner' ||
       profile.account_type ===
-        'developer'
+        'developer' ||
+      profile.account_type ===
+        'staff'
     )
 
   const isPending =
     !!user &&
     profile?.account_type ===
       'pending'
+
+  const isManagementUser =
+    !!profile &&
+    profile.active === true &&
+    (
+      profile.account_type ===
+        'owner' ||
+      profile.account_type ===
+        'developer'
+    )
+
+  const hasPermission = (
+    permission:
+      AppPermission,
+  ) => {
+    if (
+      !profile ||
+      profile.active !== true
+    ) {
+      return false
+    }
+
+    if (
+      profile.account_type ===
+        'owner' ||
+      profile.account_type ===
+        'developer'
+    ) {
+      return true
+    }
+
+    if (
+      profile.account_type !==
+      'staff'
+    ) {
+      return false
+    }
+
+    switch (
+      profile.role
+    ) {
+      case 'admin':
+        return [
+          'products.read',
+          'products.create',
+          'products.update',
+          'products.delete',
+          'inventory.update',
+          'categories.manage',
+          'suppliers.manage',
+          'sales.create',
+          'sales.read',
+          'statistics.read',
+        ].includes(
+          permission,
+        )
+
+      case 'vendedor':
+        return [
+          'products.read',
+          'sales.create',
+        ].includes(
+          permission,
+        )
+
+      case 'bodega':
+        return [
+          'products.read',
+          'inventory.update',
+        ].includes(
+          permission,
+        )
+
+      default:
+        return false
+    }
+  }
 
   return (
     <AuthContext.Provider
@@ -280,7 +494,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         isAuthenticated,
         isAuthorized,
         isPending,
+        isManagementUser,
         loading,
+        hasPermission,
         login,
         registerAccount,
         loginWithGoogle,
@@ -295,7 +511,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
 export function useAuth() {
   const context =
-    useContext(AuthContext)
+    useContext(
+      AuthContext,
+    )
 
   if (!context) {
     throw new Error(

@@ -4,9 +4,15 @@ import {
   type ComponentType,
 } from 'react'
 
+import type {
+  AppPermission,
+} from './context/AuthContext'
+
 const Products =
   lazy(() =>
-    import('./pages/products/Products'),
+    import(
+      './pages/products/Products'
+    ),
   )
 
 const POS =
@@ -21,111 +27,197 @@ const Sales =
 
 const Statistics =
   lazy(() =>
-    import('./pages/Statistics'),
+    import(
+      './pages/Statistics'
+    ),
   )
 
 const ProductDetail =
   lazy(() =>
-    import('./pages/products/ProductDetail'),
+    import(
+      './pages/products/ProductDetail'
+    ),
   )
 
 const NewProduct =
   lazy(() =>
-    import('./pages/products/NewProduct'),
+    import(
+      './pages/products/NewProduct'
+    ),
   )
 
 const EditProduct =
   lazy(() =>
-    import('./pages/products/EditProduct'),
+    import(
+      './pages/products/EditProduct'
+    ),
   )
 
 const Login =
   lazy(() =>
-    import('./pages/auth/Login'),
+    import(
+      './pages/auth/Login'
+    ),
   )
 
 const Register =
   lazy(() =>
-    import('./pages/auth/Register'),
+    import(
+      './pages/auth/Register'
+    ),
   )
 
 const Users =
   lazy(() =>
     import('./pages/Users'),
-  )  
+  )
+
+const SetPassword =
+  lazy(() =>
+    import(
+      './pages/auth/SetPassword'
+    ),
+  )
 
 interface RouteConfig {
   path: string
   component: ComponentType
+
   private?: boolean
   restricted?: boolean
-  adminOnly?: boolean
+
+  permission?:
+    AppPermission
+
+  managementOnly?: boolean
 }
 
-export const routes: RouteConfig[] = [
-  {
-    path: '/productos',
-    component: () =>
-      createElement(Products),
-    private: true,
-  },
-  {
-    path: '/pos',
-    component: () =>
-      createElement(POS),
-    private: true,
-  },
-  {
-    path: '/ventas',
-    component: () =>
-      createElement(Sales),
-    private: true,
-  },
-  {
-    path: '/estadisticas',
-    component: () =>
-      createElement(Statistics),
-    private: true,
-  },
+export const routes:
+  RouteConfig[] = [
+    {
+      path:
+        '/productos',
+      component: () =>
+        createElement(
+          Products,
+        ),
+      private: true,
+      permission:
+        'products.read',
+    },
 
-  {
-    path: '/productos/:id',
-    component: () =>
-      createElement(ProductDetail),
-    private: true,
-  },
-  {
-    path: '/productos/nuevo',
-    component: () =>
-      createElement(NewProduct),
-    private: true,
-  },
-  {
-    path: '/productos/:id/editar',
-    component: () =>
-      createElement(EditProduct),
-    private: true,
-  },
+    {
+      path:
+        '/pos',
+      component: () =>
+        createElement(POS),
+      private: true,
+      permission:
+        'sales.create',
+    },
 
-  {
-    path: '/login',
-    component: () =>
-      createElement(Login),
-    private: false,
-    restricted: true,
-  },
-  {
-    path: '/registro',
-    component: () =>
-      createElement(Register),
-    private: false,
-    restricted: true,
-  },
-  {
-    path: '/usuarios',
-    component: () =>
-      createElement(Users),
-    private: true,
-    adminOnly: true,
-  },
-]
+    {
+      path:
+        '/ventas',
+      component: () =>
+        createElement(
+          Sales,
+        ),
+      private: true,
+      permission:
+        'sales.read',
+    },
+
+    {
+      path:
+        '/estadisticas',
+      component: () =>
+        createElement(
+          Statistics,
+        ),
+      private: true,
+      permission:
+        'statistics.read',
+    },
+
+    {
+      path:
+        '/productos/:id',
+      component: () =>
+        createElement(
+          ProductDetail,
+        ),
+      private: true,
+      permission:
+        'products.read',
+    },
+
+    {
+      path:
+        '/productos/nuevo',
+      component: () =>
+        createElement(
+          NewProduct,
+        ),
+      private: true,
+      permission:
+        'products.create',
+    },
+
+    {
+      path:
+        '/productos/:id/editar',
+      component: () =>
+        createElement(
+          EditProduct,
+        ),
+      private: true,
+      permission:
+        'products.update',
+    },
+
+    {
+      path:
+        '/usuarios',
+      component: () =>
+        createElement(
+          Users,
+        ),
+      private: true,
+      managementOnly:
+        true,
+    },
+
+    {
+      path:
+        '/login',
+      component: () =>
+        createElement(
+          Login,
+        ),
+      private: false,
+      restricted: true,
+    },
+
+    {
+      path:
+        '/registro',
+      component: () =>
+        createElement(
+          Register,
+        ),
+      private: false,
+      restricted: true,
+    },
+
+    {
+      path:
+        '/establecer-contrasena',
+      component: () =>
+        createElement(
+          SetPassword,
+        ),
+      private: false,
+      restricted: false,
+    },
+  ]

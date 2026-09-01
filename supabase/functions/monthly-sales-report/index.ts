@@ -100,6 +100,118 @@ function getSupabaseSecretKey() {
   )
 }
 
+async function getReportRecipients(
+  supabase: ReturnType<
+    typeof createClient
+  >,
+) {
+  const {
+    data: profiles,
+    error: profilesError,
+  } =
+    await supabase
+      .from('profiles')
+      .select('id')
+      .eq(
+        'active',
+        true,
+      )
+      .eq(
+        'receives_monthly_report',
+        true,
+      )
+
+  if (profilesError) {
+    throw new Error(
+      `No fue posible consultar los destinatarios: ${profilesError.message}`,
+    )
+  }
+
+  const profileIds =
+    new Set(
+      (profiles ?? []).map(
+        (profile) =>
+          profile.id,
+      ),
+    )
+
+  const dynamicRecipients:
+    string[] = []
+
+  if (
+    profileIds.size > 0
+  ) {
+    const {
+      data: authData,
+      error: authError,
+    } =
+      await supabase
+        .auth.admin
+        .listUsers({
+          page: 1,
+          perPage: 1000,
+        })
+
+    if (authError) {
+      throw new Error(
+        `No fue posible obtener los correos de los destinatarios: ${authError.message}`,
+      )
+    }
+
+    for (
+      const user of
+        authData.users
+    ) {
+      if (
+        profileIds.has(
+          user.id,
+        ) &&
+        user.email
+      ) {
+        dynamicRecipients.push(
+          user.email
+            .trim()
+            .toLowerCase(),
+        )
+      }
+    }
+  }
+
+  if (
+    dynamicRecipients.length >
+    0
+  ) {
+    return Array.from(
+      new Set(
+        dynamicRecipients,
+      ),
+    )
+  }
+
+  // Respaldo:
+  // si nadie está marcado desde
+  // Usuarios, usamos la configuración
+  // anterior.
+  const fallback =
+    Deno.env.get(
+      'REPORT_EMAIL_TO',
+    ) ?? ''
+
+  return Array.from(
+    new Set(
+      fallback
+        .split(',')
+        .map(
+          (value) =>
+            value
+              .trim()
+              .toLowerCase(),
+        )
+        .filter(Boolean),
+    ),
+  )
+}
+
 async function digest(
   value: string,
 ) {
@@ -318,13 +430,19 @@ function csvCell(
     )
 
   if (
-    typeof value === 'string' &&
+    typeof value ===
+      'string' &&
     (
-      /^[\t\r\n]/.test(text) ||
-      /^\s*[=+\-@]/.test(text)
+      /^[\t\r\n]/.test(
+        text,
+      ) ||
+      /^\s*[=+\-@]/.test(
+        text,
+      )
     )
   ) {
-    text = `'${text}`
+    text =
+      `'${text}`
   }
 
   return `"${text.replaceAll(
@@ -506,6 +624,7 @@ function buildSummary(
 
       currentPayment.sales +=
         1
+
       currentPayment.total +=
         sale.total
 
@@ -524,6 +643,7 @@ function buildSummary(
 
       currentSeller.sales +=
         1
+
       currentSeller.total +=
         sale.total
 
@@ -544,6 +664,7 @@ function buildSummary(
 
           currentProduct.units +=
             item.quantity
+
           currentProduct.total +=
             item.subtotal
 
@@ -722,6 +843,7 @@ function buildEmailHtml(
               </table>
 
               <h2 style="margin:26px 0 8px;font-size:16px">Métodos de pago</h2>
+
               <table style="width:100%;border-collapse:collapse;font-size:13px">
                 <thead>
                   <tr style="background:#f8fafc">
@@ -730,6 +852,7 @@ function buildEmailHtml(
                     <th style="padding:8px;text-align:right">Total</th>
                   </tr>
                 </thead>
+
                 <tbody>
                   ${paymentRows || `
                     <tr>
@@ -742,6 +865,7 @@ function buildEmailHtml(
               </table>
 
               <h2 style="margin:26px 0 8px;font-size:16px">Productos más vendidos</h2>
+
               <table style="width:100%;border-collapse:collapse;font-size:13px">
                 <thead>
                   <tr style="background:#f8fafc">
@@ -750,6 +874,7 @@ function buildEmailHtml(
                     <th style="padding:8px;text-align:right">Total</th>
                   </tr>
                 </thead>
+
                 <tbody>
                   ${productRows || `
                     <tr>
@@ -762,6 +887,7 @@ function buildEmailHtml(
               </table>
 
               <h2 style="margin:26px 0 8px;font-size:16px">Ventas por vendedor</h2>
+
               <table style="width:100%;border-collapse:collapse;font-size:13px">
                 <thead>
                   <tr style="background:#f8fafc">
@@ -770,6 +896,7 @@ function buildEmailHtml(
                     <th style="padding:8px;text-align:right">Total</th>
                   </tr>
                 </thead>
+
                 <tbody>
                   ${sellerRows || `
                     <tr>
@@ -903,15 +1030,9 @@ async function main(
       MonthlySnapshot
 
   const recipients =
-    requiredEnv(
-      'REPORT_EMAIL_TO',
+    await getReportRecipients(
+      supabase,
     )
-      .split(',')
-      .map(
-        (value) =>
-          value.trim(),
-      )
-      .filter(Boolean)
 
   if (
     recipients.length ===
@@ -920,7 +1041,7 @@ async function main(
     return response(
       {
         error:
-          'REPORT_EMAIL_TO no contiene destinatarios.',
+          'No hay destinatarios configurados para el reporte mensual.',
       },
       500,
     )

@@ -9,7 +9,9 @@ import {
   Routes,
 } from 'react-router'
 
-import { routes } from './routes'
+import {
+  routes,
+} from './routes'
 
 import {
   AuthProvider,
@@ -18,18 +20,28 @@ import {
 
 const Layout =
   lazy(() =>
-    import('./components/layout/Layout'),
+    import(
+      './components/layout/Layout'
+    ),
   )
 
 const ActivateAccount =
   lazy(() =>
-    import('./pages/auth/ActivateAccount'),
+    import(
+      './pages/auth/ActivateAccount'
+    ),
   )
-
 
 function LoadingScreen() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100">
+    <div
+      className="
+        flex min-h-screen
+        items-center
+        justify-center
+        bg-slate-100
+      "
+    >
       <p className="text-slate-500">
         Cargando...
       </p>
@@ -37,17 +49,19 @@ function LoadingScreen() {
   )
 }
 
-
 function AppRouter() {
   const {
     isAuthenticated,
     isAuthorized,
-    profile,
+    isManagementUser,
+    hasPermission,
     loading,
   } = useAuth()
 
   if (loading) {
-    return <LoadingScreen />
+    return (
+      <LoadingScreen />
+    )
   }
 
   const publicRoutes =
@@ -67,6 +81,29 @@ function AppRouter() {
       ? '/productos'
       : '/activar'
 
+  const canAccessRoute = (
+    route:
+      (typeof routes)[number],
+  ) => {
+    if (
+      route.managementOnly
+    ) {
+      return (
+        isManagementUser
+      )
+    }
+
+    if (
+      route.permission
+    ) {
+      return hasPermission(
+        route.permission,
+      )
+    }
+
+    return true
+  }
+
   return (
     <Suspense
       fallback={
@@ -77,8 +114,12 @@ function AppRouter() {
         {publicRoutes.map(
           (route) => (
             <Route
-              key={route.path}
-              path={route.path}
+              key={
+                route.path
+              }
+              path={
+                route.path
+              }
               element={
                 route.restricted &&
                 isAuthenticated ? (
@@ -135,18 +176,22 @@ function AppRouter() {
           {privateRoutes.map(
             (route) => (
               <Route
-                key={route.path}
-                path={route.path}
+                key={
+                  route.path
+                }
+                path={
+                  route.path
+                }
                 element={
-                  route.adminOnly &&
-                  profile?.account_type !== "owner" &&
-                  profile?.account_type !== "developer" ? (
+                  canAccessRoute(
+                    route,
+                  ) ? (
+                    <route.component />
+                  ) : (
                     <Navigate
                       to="/productos"
                       replace
                     />
-                  ) : (
-                    <route.component />
                   )
                 }
               />
@@ -181,7 +226,6 @@ function AppRouter() {
     </Suspense>
   )
 }
-
 
 function App() {
   return (
