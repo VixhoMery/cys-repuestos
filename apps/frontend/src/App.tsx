@@ -42,6 +42,7 @@ function AppRouter() {
   const {
     isAuthenticated,
     isAuthorized,
+    profile,
     loading,
   } = useAuth()
 
@@ -137,7 +138,16 @@ function AppRouter() {
                 key={route.path}
                 path={route.path}
                 element={
-                  <route.component />
+                  route.adminOnly &&
+                  profile?.account_type !== "owner" &&
+                  profile?.account_type !== "developer" ? (
+                    <Navigate
+                      to="/productos"
+                      replace
+                    />
+                  ) : (
+                    <route.component />
+                  )
                 }
               />
             ),

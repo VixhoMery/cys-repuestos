@@ -49,6 +49,11 @@ const Register =
     import('./pages/auth/Register'),
   )
 
+const Users =
+  lazy(() =>
+    import('./pages/Users'),
+  )  
+
 interface RouteConfig {
   path: string
   component: ComponentType
@@ -115,5 +120,12 @@ export const routes: RouteConfig[] = [
       createElement(Register),
     private: false,
     restricted: true,
+  },
+  {
+    path: '/usuarios',
+    component: () =>
+      createElement(Users),
+    private: true,
+    adminOnly: true,
   },
 ]

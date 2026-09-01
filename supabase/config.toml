@@ -3,3 +3,8 @@ verify_jwt = true
 
 [functions.monthly-sales-report]
 verify_jwt = false
+
+[functions.manage-users]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/manage-users/index.ts"
