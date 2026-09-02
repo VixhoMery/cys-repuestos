@@ -29,9 +29,26 @@ import {
   removeStorageImages,
 } from '../../lib/productImages'
 
+import {
+  useAuth,
+} from '../../context/AuthContext'
+
 
 function Products() {
   const navigate = useNavigate()
+
+  const { hasPermission } = useAuth()
+
+  const canCreateProduct =
+    hasPermission('products.create')
+
+  const canEditProduct =
+    hasPermission('products.update')
+
+  const canDeleteProduct =
+    hasPermission('products.delete')
+
+
   // ------------------------------------
   // Productos reales
   // ------------------------------------
@@ -158,7 +175,7 @@ function Products() {
       }
     }
 
-    loadProducts()
+    void loadProducts()
   }, [
     page,
     debouncedSearch,
@@ -175,6 +192,10 @@ function Products() {
     id: number,
     name: string,
   ) => {
+    if (!canDeleteProduct) {
+      return
+    }
+
     setDeleteError('')
 
     setProductToDelete({
@@ -204,7 +225,10 @@ function Products() {
 
   const confirmDeleteProduct =
     async () => {
-      if (!productToDelete) {
+      if (
+        !productToDelete ||
+        !canDeleteProduct
+      ) {
         return
       }
 
@@ -212,26 +236,41 @@ function Products() {
         setDeleting(true)
         setDeleteError('')
 
-        const product = products.find(
-          (currentProduct) =>
-            currentProduct.id === productToDelete.id,
-        )
+        const product =
+          products.find(
+            (currentProduct) =>
+              currentProduct.id ===
+              productToDelete.id,
+          )
 
         const storagePaths =
           product?.images
-            .map((image) => image.storagePath)
+            .map(
+              (image) =>
+                image.storagePath,
+            )
             .filter(
-              (path): path is string => path !== null,
+              (
+                path,
+              ): path is string =>
+                path !== null,
             ) ?? []
 
         await deleteProduct(
           productToDelete.id,
         )
 
-        if (storagePaths.length > 0) {
+        if (
+          storagePaths.length >
+          0
+        ) {
           try {
-            await removeStorageImages(storagePaths)
-          } catch (cleanupError) {
+            await removeStorageImages(
+              storagePaths,
+            )
+          } catch (
+            cleanupError
+          ) {
             console.error(
               'No fue posible borrar las imágenes del Storage:',
               cleanupError,
@@ -296,30 +335,33 @@ function Products() {
             productos de C&S Repuestos.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() =>
-            navigate(
-              '/productos/nuevo',
-            )
-          }
-          className="
-            inline-flex
-            items-center
-            justify-center
-            gap-2
-            rounded-xl
-            bg-blue-600
-            px-5 py-3
-            font-medium
-            text-white
-            transition
-            hover:bg-blue-700
-          "
-        >
-          <Plus size={19} />
-          Agregar producto
-        </button>
+
+        {canCreateProduct && (
+          <button
+            type="button"
+            onClick={() =>
+              navigate(
+                '/productos/nuevo',
+              )
+            }
+            className="
+              inline-flex
+              items-center
+              justify-center
+              gap-2
+              rounded-xl
+              bg-blue-600
+              px-5 py-3
+              font-medium
+              text-white
+              transition
+              hover:bg-blue-700
+            "
+          >
+            <Plus size={19} />
+            Agregar producto
+          </button>
+        )}
       </header>
 
 
@@ -339,6 +381,7 @@ function Products() {
             text-slate-400
           "
         />
+
         <input
           type="search"
           value={search}
@@ -412,6 +455,7 @@ function Products() {
                     text-blue-600
                   "
                 />
+
                 <p className="mt-3 text-sm text-slate-500">
                   Cargando productos...
                 </p>
@@ -440,6 +484,7 @@ function Products() {
                     text-red-500
                   "
                 />
+
                 <p className="mt-3 font-medium text-red-700">
                   {error}
                 </p>
@@ -489,8 +534,16 @@ function Products() {
                       image={
                         product.image
                       }
+                      canEdit={
+                        canEditProduct
+                      }
+                      canDelete={
+                        canDeleteProduct
+                      }
                       onDelete={
-                        requestDeleteProduct
+                        canDeleteProduct
+                          ? requestDeleteProduct
+                          : undefined
                       }
                     />
                   ),
@@ -522,6 +575,7 @@ function Products() {
                     No se encontraron
                     productos.
                   </p>
+
                   <p className="mt-1 text-sm text-slate-500">
                     Prueba cambiando la
                     búsqueda o la categoría.
@@ -533,7 +587,8 @@ function Products() {
           {/* Paginación */}
           {!loading &&
             !error &&
-            pagination.total > 0 && (
+            pagination.total >
+              0 && (
               <div
                 className="
                   mt-7
@@ -720,6 +775,7 @@ function Products() {
                   transition
                   hover:bg-slate-100
                   hover:text-slate-600
+                  disabled:opacity-50
                 "
                 aria-label="Cerrar"
               >
