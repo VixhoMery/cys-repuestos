@@ -77,6 +77,8 @@ type TemporaryProductForm = {
   netPrice: string
   salePrice: string
   quantity: string
+  customerName: string
+  customerPhone: string
 }
 
 
@@ -86,6 +88,8 @@ const EMPTY_TEMPORARY_PRODUCT_FORM:
     netPrice: '',
     salePrice: '',
     quantity: '1',
+    customerName: '',
+    customerPhone: '',
   }
 
 
@@ -216,6 +220,20 @@ function POS() {
   const [
     temporaryProductError,
     setTemporaryProductError,
+  ] =
+    useState('')
+
+
+  const [
+    customerName,
+    setCustomerName,
+  ] =
+    useState('')
+
+
+  const [
+    customerPhone,
+    setCustomerPhone,
   ] =
     useState('')
 
@@ -504,6 +522,8 @@ function POS() {
     () => {
       setTemporaryProductForm({
         ...EMPTY_TEMPORARY_PRODUCT_FORM,
+        customerName,
+        customerPhone,
       })
 
       setTemporaryProductError(
@@ -557,6 +577,16 @@ function POS() {
         )
 
 
+      const buyerName =
+        temporaryProductForm.customerName
+          .trim()
+
+
+      const buyerPhone =
+        temporaryProductForm.customerPhone
+          .trim()
+
+
       if (
         name.length < 1 ||
         name.length > 100
@@ -590,6 +620,30 @@ function POS() {
       if (!quantity) {
         setTemporaryProductError(
           'Ingresa una cantidad válida mayor a 0.',
+        )
+
+        return
+      }
+
+
+      if (
+        buyerName.length < 1 ||
+        buyerName.length > 120
+      ) {
+        setTemporaryProductError(
+          'Ingresa el nombre del comprador.',
+        )
+
+        return
+      }
+
+
+      if (
+        buyerPhone.length < 6 ||
+        buyerPhone.length > 30
+      ) {
+        setTemporaryProductError(
+          'Ingresa un teléfono válido de entre 6 y 30 caracteres.',
         )
 
         return
@@ -641,6 +695,15 @@ function POS() {
           currentId,
         ) =>
           currentId - 1,
+      )
+
+
+      setCustomerName(
+        buyerName,
+      )
+
+      setCustomerPhone(
+        buyerPhone,
       )
 
 
@@ -773,6 +836,8 @@ function POS() {
   const confirmCancelSale =
     () => {
       setCart([])
+      setCustomerName('')
+      setCustomerPhone('')
       setShowCancelModal(
         false,
       )
@@ -889,6 +954,24 @@ function POS() {
                     creditInstallments,
                   )
                 : null,
+
+            customerName:
+              cart.some(
+                (item) =>
+                  item.itemType ===
+                  'temporary',
+              )
+                ? customerName
+                : null,
+
+            customerPhone:
+              cart.some(
+                (item) =>
+                  item.itemType ===
+                  'temporary',
+              )
+                ? customerPhone
+                : null,
           })
 
 
@@ -916,6 +999,9 @@ function POS() {
 
 
         setCart([])
+
+        setCustomerName('')
+        setCustomerPhone('')
 
         setShowFinishModal(
           false,
@@ -1678,6 +1764,123 @@ function POS() {
 
               <div
                 className="
+                  border-t
+                  border-slate-200
+                  pt-5
+                "
+              >
+                <div className="mb-4">
+                  <h3 className="font-semibold text-slate-900">
+                    Datos del comprador
+                  </h3>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    Estos datos se asociarán a la venta completa.
+                  </p>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label
+                      htmlFor="temporary-customer-name"
+                      className="
+                        mb-2 block
+                        text-sm font-medium
+                        text-slate-700
+                      "
+                    >
+                      Nombre
+                    </label>
+
+                    <input
+                      id="temporary-customer-name"
+                      type="text"
+                      autoComplete="name"
+                      maxLength={120}
+                      value={
+                        temporaryProductForm.customerName
+                      }
+                      onChange={(event) =>
+                        setTemporaryProductForm(
+                          (
+                            current,
+                          ) => ({
+                            ...current,
+                            customerName:
+                              event.target
+                                .value,
+                          }),
+                        )
+                      }
+                      placeholder="Ej: Juan Pérez"
+                      className="
+                        w-full rounded-xl
+                        border border-slate-300
+                        bg-white
+                        px-4 py-3
+                        outline-none
+                        transition
+                        focus:border-blue-500
+                        focus:ring-2
+                        focus:ring-blue-100
+                      "
+                    />
+                  </div>
+
+
+                  <div>
+                    <label
+                      htmlFor="temporary-customer-phone"
+                      className="
+                        mb-2 block
+                        text-sm font-medium
+                        text-slate-700
+                      "
+                    >
+                      Teléfono
+                    </label>
+
+                    <input
+                      id="temporary-customer-phone"
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      maxLength={30}
+                      value={
+                        temporaryProductForm.customerPhone
+                      }
+                      onChange={(event) =>
+                        setTemporaryProductForm(
+                          (
+                            current,
+                          ) => ({
+                            ...current,
+                            customerPhone:
+                              event.target
+                                .value,
+                          }),
+                        )
+                      }
+                      placeholder="Ej: +56 9 1234 5678"
+                      className="
+                        w-full rounded-xl
+                        border border-slate-300
+                        bg-white
+                        px-4 py-3
+                        outline-none
+                        transition
+                        focus:border-blue-500
+                        focus:ring-2
+                        focus:ring-blue-100
+                      "
+                    />
+                  </div>
+                </div>
+              </div>
+
+
+              <div
+                className="
                   rounded-xl
                   border border-blue-100
                   bg-blue-50
@@ -1908,6 +2111,33 @@ function POS() {
                 ),
               )}
             </div>
+
+
+            {cart.some(
+              (item) =>
+                item.itemType ===
+                'temporary',
+            ) && (
+              <div
+                className="
+                  border-t
+                  border-slate-200
+                  px-6 py-4
+                "
+              >
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                  Comprador
+                </p>
+
+                <p className="mt-1 font-medium text-slate-900">
+                  {customerName}
+                </p>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  {customerPhone}
+                </p>
+              </div>
+            )}
 
 
             {/* Método de pago */}

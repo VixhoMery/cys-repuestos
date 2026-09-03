@@ -172,6 +172,14 @@ export type CreatedSale = {
     | number
     | null
 
+  customerName:
+    | string
+    | null
+
+  customerPhone:
+    | string
+    | null
+
   items:
     CreatedSaleItem[]
 }
@@ -218,6 +226,14 @@ export type Sale = {
     | number
     | null
 
+  customerName:
+    | string
+    | null
+
+  customerPhone:
+    | string
+    | null
+
   items:
     SaleItem[]
 }
@@ -225,10 +241,6 @@ export type Sale = {
 
 // ============================================================
 // COMPROBANTE
-//
-// Se conserva simple para no alterar el diseño actual.
-// itemType queda disponible para distinguir visualmente
-// productos temporales si más adelante se desea.
 // ============================================================
 
 export type ReceiptSale = {
@@ -246,6 +258,14 @@ export type ReceiptSale = {
 
   installments:
     | number
+    | null
+
+  customerName:
+    | string
+    | null
+
+  customerPhone:
+    | string
     | null
 
   items: Array<{
@@ -282,6 +302,14 @@ export function createdSaleToReceiptSale(
 
     installments:
       sale.installments,
+
+    customerName:
+      sale.customerName ??
+      null,
+
+    customerPhone:
+      sale.customerPhone ??
+      null,
 
     items:
       sale.items.map(
@@ -325,6 +353,14 @@ export function saleToReceiptSale(
     installments:
       sale.installments,
 
+    customerName:
+      sale.customerName ??
+      null,
+
+    customerPhone:
+      sale.customerPhone ??
+      null,
+
     items:
       sale.items.map(
         (item) => ({
@@ -340,6 +376,74 @@ export function saleToReceiptSale(
           unitPrice:
             item.unitPrice,
         }),
+      ),
+  }
+}
+
+
+// ============================================================
+// NORMALIZACIÓN
+// ============================================================
+
+function normalizeNullableText(
+  value: unknown,
+) {
+  if (
+    typeof value !==
+    'string'
+  ) {
+    return null
+  }
+
+  const normalized =
+    value.trim()
+
+  return normalized
+    ? normalized
+    : null
+}
+
+
+function normalizeCreatedSale(
+  value: unknown,
+): CreatedSale {
+  const data =
+    value as
+      Record<
+        string,
+        unknown
+      >
+
+  return {
+    ...(data as unknown as CreatedSale),
+
+    customerName:
+      normalizeNullableText(
+        data.customerName,
+      ),
+
+    customerPhone:
+      normalizeNullableText(
+        data.customerPhone,
+      ),
+  }
+}
+
+
+function normalizeSale(
+  sale: Sale,
+): Sale {
+  return {
+    ...sale,
+
+    customerName:
+      normalizeNullableText(
+        sale.customerName,
+      ),
+
+    customerPhone:
+      normalizeNullableText(
+        sale.customerPhone,
       ),
   }
 }
@@ -444,6 +548,14 @@ export async function createSale(
           'credito'
             ? input.installments
             : null,
+
+        p_customer_name:
+          input.customerName ??
+          null,
+
+        p_customer_phone:
+          input.customerPhone ??
+          null,
       },
     )
 
@@ -462,12 +574,17 @@ export async function createSale(
 
   invalidateSalesCache()
 
-  return data as CreatedSale
+  return normalizeCreatedSale(
+    data,
+  )
 }
 
 
 // ============================================================
 // LISTAR VENTAS
+//
+// Esta consulta sí incluye datos de comprador.
+// Estadísticas sigue usando el RPC por rango sin PII.
 // ============================================================
 
 export async function getSales() {
@@ -493,7 +610,7 @@ export async function getSales() {
         error,
       } =
         await supabase.rpc(
-          'cys_list_sales',
+          'cys_list_sales_with_customer',
         )
 
       if (error) {
@@ -510,16 +627,21 @@ export async function getSales() {
             | null
         ) ?? []
 
+      const normalizedSales =
+        sales.map(
+          normalizeSale,
+        )
+
       salesCache = {
         data:
-          sales,
+          normalizedSales,
 
         expiresAt:
           Date.now() +
           SALES_CACHE_TTL_MS,
       }
 
-      return sales
+      return normalizedSales
     })()
 
   try {
@@ -532,6 +654,9 @@ export async function getSales() {
 
 // ============================================================
 // VENTAS POR RANGO
+//
+// No expone datos de comprador:
+// se utiliza para Estadísticas y reportes agregados.
 // ============================================================
 
 export async function getSalesRange(

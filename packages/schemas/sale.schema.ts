@@ -58,7 +58,7 @@ function positiveIntegerSchema(
           requiredMessage,
         )
         .regex(
-          /^\\d+$/,
+          /^\d+$/,
           integerMessage,
         ),
     ])
@@ -109,43 +109,110 @@ const temporarySalePriceSchema = positiveIntegerSchema(
   'El valor de venta es demasiado grande',
 )
 
-export const inventorySaleItemSchema =
-  z.object({
-    type: z.literal('inventory').optional(),
+const customerNameSchema = z
+  .preprocess(
+    (value) => {
+      if (
+        value === '' ||
+        value === null
+      ) {
+        return null
+      }
 
-    productId: z.coerce
-      .number()
-      .int(
-        'El producto seleccionado no es válido',
-      )
-      .positive(
-        'El producto seleccionado no es válido',
-      ),
-
-    quantity: quantitySchema,
-  })
-
-export const temporarySaleItemSchema =
-  z.object({
-    type: z.literal('temporary'),
-
-    name: z
+      return value
+    },
+    z
       .string()
       .trim()
       .min(
         1,
-        'El nombre del producto temporal es obligatorio',
+        'El nombre del comprador es obligatorio',
       )
       .max(
-        100,
-        'El nombre del producto temporal no puede superar los 100 caracteres',
+        120,
+        'El nombre del comprador no puede superar los 120 caracteres',
+      )
+      .nullable(),
+  )
+  .optional()
+
+const customerPhoneSchema = z
+  .preprocess(
+    (value) => {
+      if (
+        value === '' ||
+        value === null
+      ) {
+        return null
+      }
+
+      return value
+    },
+    z
+      .string()
+      .trim()
+      .min(
+        6,
+        'El teléfono del comprador no es válido',
+      )
+      .max(
+        30,
+        'El teléfono del comprador no puede superar los 30 caracteres',
+      )
+      .nullable(),
+  )
+  .optional()
+
+export const inventorySaleItemSchema =
+  z.object({
+    type:
+      z.literal(
+        'inventory',
+      )
+        .optional(),
+
+    productId:
+      z.coerce
+        .number()
+        .int(
+          'El producto seleccionado no es válido',
+        )
+        .positive(
+          'El producto seleccionado no es válido',
+        ),
+
+    quantity:
+      quantitySchema,
+  })
+
+export const temporarySaleItemSchema =
+  z.object({
+    type:
+      z.literal(
+        'temporary',
       ),
 
-    netPrice: temporaryNetPriceSchema,
+    name:
+      z
+        .string()
+        .trim()
+        .min(
+          1,
+          'El nombre del producto temporal es obligatorio',
+        )
+        .max(
+          100,
+          'El nombre del producto temporal no puede superar los 100 caracteres',
+        ),
 
-    salePrice: temporarySalePriceSchema,
+    netPrice:
+      temporaryNetPriceSchema,
 
-    quantity: quantitySchema,
+    salePrice:
+      temporarySalePriceSchema,
+
+    quantity:
+      quantitySchema,
   })
 
 export const saleItemSchema =
@@ -169,22 +236,31 @@ export type SaleItemInput =
 
 export const createSaleSchema = z
   .object({
-    items: z
-      .array(saleItemSchema)
-      .min(
-        1,
-        'La venta debe incluir al menos un producto',
-      )
-      .max(
-        100,
-        'La venta contiene demasiados productos',
-      ),
+    items:
+      z
+        .array(
+          saleItemSchema,
+        )
+        .min(
+          1,
+          'La venta debe incluir al menos un producto',
+        )
+        .max(
+          100,
+          'La venta contiene demasiados productos',
+        ),
 
     paymentMethod:
       paymentMethodSchema,
 
     installments:
       installmentsSchema,
+
+    customerName:
+      customerNameSchema,
+
+    customerPhone:
+      customerPhoneSchema,
   })
   .superRefine(
     (
@@ -199,7 +275,8 @@ export const createSaleSchema = z
       ) {
         context.addIssue({
           code:
-            z.ZodIssueCode.custom,
+            z.ZodIssueCode
+              .custom,
           path: [
             'installments',
           ],
@@ -216,12 +293,91 @@ export const createSaleSchema = z
       ) {
         context.addIssue({
           code:
-            z.ZodIssueCode.custom,
+            z.ZodIssueCode
+              .custom,
           path: [
             'installments',
           ],
           message:
             'Las cuotas solo corresponden a pagos con crédito',
+        })
+      }
+
+      const hasTemporaryItem =
+        value.items.some(
+          (item) =>
+            item.type ===
+            'temporary',
+        )
+
+      const hasCustomerName =
+        value.customerName !=
+        null
+
+      const hasCustomerPhone =
+        value.customerPhone !=
+        null
+
+      if (
+        hasCustomerName !==
+        hasCustomerPhone
+      ) {
+        if (!hasCustomerName) {
+          context.addIssue({
+            code:
+              z.ZodIssueCode
+                .custom,
+            path: [
+              'customerName',
+            ],
+            message:
+              'Ingresa el nombre del comprador',
+          })
+        }
+
+        if (!hasCustomerPhone) {
+          context.addIssue({
+            code:
+              z.ZodIssueCode
+                .custom,
+            path: [
+              'customerPhone',
+            ],
+            message:
+              'Ingresa el teléfono del comprador',
+          })
+        }
+      }
+
+      if (
+        hasTemporaryItem &&
+        !hasCustomerName
+      ) {
+        context.addIssue({
+          code:
+            z.ZodIssueCode
+              .custom,
+          path: [
+            'customerName',
+          ],
+          message:
+            'Los productos temporales requieren el nombre del comprador',
+        })
+      }
+
+      if (
+        hasTemporaryItem &&
+        !hasCustomerPhone
+      ) {
+        context.addIssue({
+          code:
+            z.ZodIssueCode
+              .custom,
+          path: [
+            'customerPhone',
+          ],
+          message:
+            'Los productos temporales requieren el teléfono del comprador',
         })
       }
     },
