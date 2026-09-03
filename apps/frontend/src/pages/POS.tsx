@@ -1,10 +1,15 @@
-import { useEffect, useState } from 'react'
+import {
+  useEffect,
+  useState,
+} from 'react'
+
 import {
   AlertTriangle,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   LoaderCircle,
+  Plus,
   Printer,
   Search,
   X,
@@ -12,6 +17,7 @@ import {
 
 import PosProductCard from '../components/pos/PosProductCard'
 import Cart from '../components/pos/Cart'
+
 import {
   getProducts,
   type Product,
@@ -33,41 +39,136 @@ import {
 } from '../lib/saleReceipt'
 
 
+// ============================================================
+// PRODUCTO DENTRO DE LA VENTA
+// ============================================================
 
-// ------------------------------------
-// Producto dentro de la venta
-// ------------------------------------
-
-type CartItem = {
+type InventoryCartItem = {
   id: number
+  itemType: 'inventory'
   name: string
   price: number
   quantity: number
   stock: number
+  netPrice: number | null
+  priceWithTax: number | null
+}
+
+
+type TemporaryCartItem = {
+  id: number
+  itemType: 'temporary'
+  name: string
+  price: number
+  quantity: number
+  stock: null
+  netPrice: number
+  priceWithTax: number
+}
+
+
+type CartItem =
+  | InventoryCartItem
+  | TemporaryCartItem
+
+
+type TemporaryProductForm = {
+  name: string
+  netPrice: string
+  salePrice: string
+  quantity: string
+}
+
+
+const EMPTY_TEMPORARY_PRODUCT_FORM:
+  TemporaryProductForm = {
+    name: '',
+    netPrice: '',
+    salePrice: '',
+    quantity: '1',
+  }
+
+
+// ============================================================
+// HELPERS
+// ============================================================
+
+function calculatePriceWithTax(
+  netPrice: number,
+) {
+  return Math.round(
+    netPrice * 1.19,
+  )
+}
+
+
+function parsePositiveInteger(
+  value: string,
+) {
+  if (!/^\d+$/.test(value)) {
+    return null
+  }
+
+  const parsed =
+    Number(value)
+
+  if (
+    !Number.isSafeInteger(
+      parsed,
+    ) ||
+    parsed <= 0
+  ) {
+    return null
+  }
+
+  return parsed
 }
 
 
 function POS() {
-  // ------------------------------------
-  // Estados
-  // ------------------------------------
+  // ==========================================================
+  // ESTADOS
+  // ==========================================================
 
-  const [search, setSearch] =
+  const [
+    search,
+    setSearch,
+  ] =
     useState('')
 
-  const [products, setProducts] =
+
+  const [
+    products,
+    setProducts,
+  ] =
     useState<Product[]>([])
 
-  const [page, setPage] =
+
+  const [
+    page,
+    setPage,
+  ] =
     useState(1)
 
-  const [debouncedSearch, setDebouncedSearch] =
+
+  const [
+    debouncedSearch,
+    setDebouncedSearch,
+  ] =
     useState('')
 
-  const [productsLoading, setProductsLoading] =
+
+  const [
+    productsLoading,
+    setProductsLoading,
+  ] =
     useState(true)
 
-  const [pagination, setPagination] =
+
+  const [
+    pagination,
+    setPagination,
+  ] =
     useState({
       page: 1,
       limit: 25,
@@ -77,78 +178,724 @@ function POS() {
       hasNextPage: false,
     })
 
-  const [cart, setCart] =
+
+  const [
+    cart,
+    setCart,
+  ] =
     useState<CartItem[]>([])
+
+
+  const [
+    nextTemporaryId,
+    setNextTemporaryId,
+  ] =
+    useState(-1)
+
+
+  // ----------------------------------------------------------
+  // Modal producto temporal
+  // ----------------------------------------------------------
+
+  const [
+    showTemporaryProductModal,
+    setShowTemporaryProductModal,
+  ] =
+    useState(false)
+
+
+  const [
+    temporaryProductForm,
+    setTemporaryProductForm,
+  ] =
+    useState<TemporaryProductForm>({
+      ...EMPTY_TEMPORARY_PRODUCT_FORM,
+    })
+
+
+  const [
+    temporaryProductError,
+    setTemporaryProductError,
+  ] =
+    useState('')
+
+
+  // ----------------------------------------------------------
+  // Modales venta
+  // ----------------------------------------------------------
 
   const [
     showCancelModal,
     setShowCancelModal,
-  ] = useState(false)
+  ] =
+    useState(false)
+
 
   const [
     showFinishModal,
     setShowFinishModal,
-  ] = useState(false)
+  ] =
+    useState(false)
+
 
   const [
     saleCompleted,
     setSaleCompleted,
-  ] = useState(false)
+  ] =
+    useState(false)
+
 
   const [
     paymentMethod,
     setPaymentMethod,
-  ] = useState<
-    PaymentMethod | ''
-  >('')
+  ] =
+    useState<
+      PaymentMethod | ''
+    >('')
+
 
   const [
     completedSale,
     setCompletedSale,
-  ] = useState<
-    CreatedSale | null
-  >(null)
+  ] =
+    useState<
+      CreatedSale | null
+    >(null)
+
 
   const [
     creditInstallments,
     setCreditInstallments,
-  ] = useState<
-    number | ''
-  >('')
+  ] =
+    useState<
+      number | ''
+    >('')
+
 
   const [
     printError,
     setPrintError,
-  ] = useState('')
+  ] =
+    useState('')
 
 
-  // ------------------------------------
-  // Esperar brevemente al escribir
-  // ------------------------------------
+  const [
+    saleSubmitting,
+    setSaleSubmitting,
+  ] =
+    useState(false)
+
+
+  // ==========================================================
+  // BÚSQUEDA
+  // ==========================================================
 
   useEffect(() => {
     const timeout =
-      window.setTimeout(() => {
-        setDebouncedSearch(
-          search.trim(),
-        )
-      }, 350)
+      window.setTimeout(
+        () => {
+          setDebouncedSearch(
+            search.trim(),
+          )
+        },
+        350,
+      )
 
     return () =>
-      window.clearTimeout(timeout)
+      window.clearTimeout(
+        timeout,
+      )
   }, [search])
 
 
-  // ------------------------------------
-  // Cargar 25 productos por página
-  // ------------------------------------
+  // ==========================================================
+  // CARGAR PRODUCTOS
+  // ==========================================================
 
   useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        setProductsLoading(true)
+    const loadProducts =
+      async () => {
+        try {
+          setProductsLoading(
+            true,
+          )
 
-        const result =
+          const result =
+            await getProducts({
+              page,
+              limit: 25,
+              search:
+                debouncedSearch ||
+                undefined,
+            })
+
+          setProducts(
+            result.data,
+          )
+
+          setPagination(
+            result.pagination,
+          )
+        } catch (error) {
+          console.error(
+            'Error cargando productos en POS:',
+            error,
+          )
+        } finally {
+          setProductsLoading(
+            false,
+          )
+        }
+      }
+
+    void loadProducts()
+  }, [
+    page,
+    debouncedSearch,
+  ])
+
+
+  // ==========================================================
+  // TOTALES
+  // ==========================================================
+
+  const total =
+    cart.reduce(
+      (
+        accumulator,
+        item,
+      ) =>
+        accumulator +
+        item.price *
+          item.quantity,
+      0,
+    )
+
+
+  const totalUnits =
+    cart.reduce(
+      (
+        accumulator,
+        item,
+      ) =>
+        accumulator +
+        item.quantity,
+      0,
+    )
+
+
+  const temporaryNetPrice =
+    parsePositiveInteger(
+      temporaryProductForm.netPrice,
+    )
+
+
+  const temporaryPriceWithTax =
+    temporaryNetPrice
+      ? calculatePriceWithTax(
+          temporaryNetPrice,
+        )
+      : 0
+
+
+  // ==========================================================
+  // AGREGAR PRODUCTO DE INVENTARIO
+  // ==========================================================
+
+  const addProduct = (
+    id: number,
+  ) => {
+    const product =
+      products.find(
+        (product) =>
+          product.id === id,
+      )
+
+    if (
+      !product ||
+      product.stock === 0
+    ) {
+      return
+    }
+
+
+    setCart(
+      (
+        currentCart,
+      ) => {
+        const existing =
+          currentCart.find(
+            (item) =>
+              item.itemType ===
+                'inventory' &&
+              item.id === id,
+          )
+
+
+        if (
+          existing &&
+          existing.itemType ===
+            'inventory'
+        ) {
+          if (
+            existing.quantity >=
+            existing.stock
+          ) {
+            return currentCart
+          }
+
+
+          return currentCart.map(
+            (item) =>
+              item.itemType ===
+                'inventory' &&
+              item.id === id
+                ? {
+                    ...item,
+                    quantity:
+                      item.quantity +
+                      1,
+                  }
+                : item,
+          )
+        }
+
+
+        return [
+          ...currentCart,
+          {
+            id:
+              product.id,
+
+            itemType:
+              'inventory',
+
+            name:
+              product.name,
+
+            price:
+              product.price,
+
+            quantity:
+              1,
+
+            stock:
+              product.stock,
+
+            netPrice:
+              product.netPrice ??
+              null,
+
+            priceWithTax:
+              product.priceWithTax ??
+              null,
+          },
+        ]
+      },
+    )
+  }
+
+
+  // ==========================================================
+  // PRODUCTO TEMPORAL
+  // ==========================================================
+
+  const openTemporaryProductModal =
+    () => {
+      setTemporaryProductForm({
+        ...EMPTY_TEMPORARY_PRODUCT_FORM,
+      })
+
+      setTemporaryProductError(
+        '',
+      )
+
+      setShowTemporaryProductModal(
+        true,
+      )
+    }
+
+
+  const closeTemporaryProductModal =
+    () => {
+      setShowTemporaryProductModal(
+        false,
+      )
+
+      setTemporaryProductError(
+        '',
+      )
+
+      setTemporaryProductForm({
+        ...EMPTY_TEMPORARY_PRODUCT_FORM,
+      })
+    }
+
+
+  const addTemporaryProduct =
+    () => {
+      const name =
+        temporaryProductForm.name
+          .trim()
+
+
+      const netPrice =
+        parsePositiveInteger(
+          temporaryProductForm.netPrice,
+        )
+
+
+      const salePrice =
+        parsePositiveInteger(
+          temporaryProductForm.salePrice,
+        )
+
+
+      const quantity =
+        parsePositiveInteger(
+          temporaryProductForm.quantity,
+        )
+
+
+      if (
+        name.length < 1 ||
+        name.length > 100
+      ) {
+        setTemporaryProductError(
+          'Ingresa un nombre válido de hasta 100 caracteres.',
+        )
+
+        return
+      }
+
+
+      if (!netPrice) {
+        setTemporaryProductError(
+          'Ingresa un valor neto válido mayor a $0.',
+        )
+
+        return
+      }
+
+
+      if (!salePrice) {
+        setTemporaryProductError(
+          'Ingresa un valor de venta válido mayor a $0.',
+        )
+
+        return
+      }
+
+
+      if (!quantity) {
+        setTemporaryProductError(
+          'Ingresa una cantidad válida mayor a 0.',
+        )
+
+        return
+      }
+
+
+      const priceWithTax =
+        calculatePriceWithTax(
+          netPrice,
+        )
+
+
+      const temporaryId =
+        nextTemporaryId
+
+
+      setCart(
+        (
+          currentCart,
+        ) => [
+          ...currentCart,
+          {
+            id:
+              temporaryId,
+
+            itemType:
+              'temporary',
+
+            name,
+
+            price:
+              salePrice,
+
+            quantity,
+
+            stock:
+              null,
+
+            netPrice,
+
+            priceWithTax,
+          },
+        ],
+      )
+
+
+      setNextTemporaryId(
+        (
+          currentId,
+        ) =>
+          currentId - 1,
+      )
+
+
+      closeTemporaryProductModal()
+  }
+
+
+  // ==========================================================
+  // CANTIDADES DEL CARRITO
+  // ==========================================================
+
+  const increaseQuantity = (
+    id: number,
+  ) => {
+    setCart(
+      (
+        currentCart,
+      ) =>
+        currentCart.map(
+          (item) => {
+            if (
+              item.id !== id
+            ) {
+              return item
+            }
+
+
+            if (
+              item.itemType ===
+              'temporary'
+            ) {
+              return {
+                ...item,
+                quantity:
+                  item.quantity +
+                  1,
+              }
+            }
+
+
+            if (
+              item.quantity >=
+              item.stock
+            ) {
+              return item
+            }
+
+
+            return {
+              ...item,
+              quantity:
+                item.quantity +
+                1,
+            }
+          },
+        ),
+    )
+  }
+
+
+  const decreaseQuantity = (
+    id: number,
+  ) => {
+    setCart(
+      (
+        currentCart,
+      ) =>
+        currentCart
+          .map(
+            (item) =>
+              item.id === id
+                ? {
+                    ...item,
+                    quantity:
+                      item.quantity -
+                      1,
+                  }
+                : item,
+          )
+          .filter(
+            (item) =>
+              item.quantity >
+              0,
+          ),
+    )
+  }
+
+
+  const removeProduct = (
+    id: number,
+  ) => {
+    setCart(
+      (
+        currentCart,
+      ) =>
+        currentCart.filter(
+          (item) =>
+            item.id !== id,
+        ),
+    )
+  }
+
+
+  // ==========================================================
+  // CANCELAR VENTA
+  // ==========================================================
+
+  const requestCancelSale =
+    () => {
+      if (
+        cart.length === 0
+      ) {
+        return
+      }
+
+      setShowCancelModal(
+        true,
+      )
+    }
+
+
+  const closeCancelModal =
+    () => {
+      setShowCancelModal(
+        false,
+      )
+    }
+
+
+  const confirmCancelSale =
+    () => {
+      setCart([])
+      setShowCancelModal(
+        false,
+      )
+    }
+
+
+  // ==========================================================
+  // FINALIZAR VENTA
+  // ==========================================================
+
+  const requestFinishSale =
+    () => {
+      if (
+        cart.length === 0
+      ) {
+        return
+      }
+
+      setPaymentMethod('')
+      setCreditInstallments(
+        '',
+      )
+      setPrintError('')
+      setShowFinishModal(
+        true,
+      )
+    }
+
+
+  const closeFinishModal =
+    () => {
+      if (saleSubmitting) {
+        return
+      }
+
+      setShowFinishModal(
+        false,
+      )
+    }
+
+
+  const confirmFinishSale =
+    async () => {
+      if (
+        !paymentMethod ||
+        saleSubmitting
+      ) {
+        return
+      }
+
+
+      if (
+        paymentMethod ===
+          'credito' &&
+        !creditInstallments
+      ) {
+        return
+      }
+
+
+      try {
+        setSaleSubmitting(
+          true,
+        )
+
+
+        const createdSale =
+          await createSale({
+            items:
+              cart.map(
+                (item) => {
+                  if (
+                    item.itemType ===
+                    'temporary'
+                  ) {
+                    return {
+                      type:
+                        'temporary' as const,
+
+                      name:
+                        item.name,
+
+                      netPrice:
+                        item.netPrice,
+
+                      salePrice:
+                        item.price,
+
+                      quantity:
+                        item.quantity,
+                    }
+                  }
+
+
+                  return {
+                    type:
+                      'inventory' as const,
+
+                    productId:
+                      item.id,
+
+                    quantity:
+                      item.quantity,
+                  }
+                },
+              ),
+
+            paymentMethod,
+
+            installments:
+              paymentMethod ===
+              'credito'
+                ? Number(
+                    creditInstallments,
+                  )
+                : null,
+          })
+
+
+        // Volvemos a consultar productos para
+        // reflejar inmediatamente el stock real
+        // de los ítems de inventario.
+        const updatedProducts =
           await getProducts({
             page,
             limit: 25,
@@ -157,297 +904,100 @@ function POS() {
               undefined,
           })
 
-        setProducts(result.data)
+
+        setProducts(
+          updatedProducts.data,
+        )
+
+
         setPagination(
-          result.pagination,
+          updatedProducts.pagination,
+        )
+
+
+        setCart([])
+
+        setShowFinishModal(
+          false,
+        )
+
+        setPaymentMethod('')
+
+        setCreditInstallments(
+          '',
+        )
+
+        setCompletedSale(
+          createdSale,
+        )
+
+        setSaleCompleted(
+          true,
         )
       } catch (error) {
         console.error(
-          'Error cargando productos en POS:',
+          'Error registrando venta:',
           error,
         )
+
+        window.alert(
+          error instanceof Error
+            ? error.message
+            : 'No fue posible registrar la venta. Revisa los datos e inténtalo nuevamente.',
+        )
       } finally {
-        setProductsLoading(false)
-      }
-    }
-
-    loadProducts()
-  }, [
-    page,
-    debouncedSearch,
-  ])
-
-
-  // ------------------------------------
-  // Total de la venta
-  // ------------------------------------
-
-  const total = cart.reduce(
-    (accumulator, item) =>
-      accumulator +
-      item.price * item.quantity,
-    0,
-  )
-
-
-  // ------------------------------------
-  // Cantidad total de unidades
-  // ------------------------------------
-
-  const totalUnits = cart.reduce(
-    (accumulator, item) =>
-      accumulator + item.quantity,
-    0,
-  )
-
-
-  // ------------------------------------
-  // Agregar producto
-  // ------------------------------------
-
-  const addProduct = (id: number) => {
-    const product =
-      products.find(
-        (product) => product.id === id,
-      )
-
-    if (!product || product.stock === 0) {
-      return
-    }
-
-    setCart((currentCart) => {
-      const existing =
-        currentCart.find(
-          (item) => item.id === id,
-        )
-
-      if (existing) {
-        if (
-          existing.quantity >=
-          existing.stock
-        ) {
-          return currentCart
-        }
-
-        return currentCart.map((item) =>
-          item.id === id
-            ? {
-                ...item,
-                quantity:
-                  item.quantity + 1,
-              }
-            : item,
+        setSaleSubmitting(
+          false,
         )
       }
-
-      return [
-        ...currentCart,
-        {
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          stock: product.stock,
-          quantity: 1,
-        },
-      ]
-    })
-  }
-
-
-  // ------------------------------------
-  // Aumentar cantidad
-  // ------------------------------------
-
-  const increaseQuantity = (
-    id: number,
-  ) => {
-    setCart((currentCart) =>
-      currentCart.map((item) =>
-        item.id === id &&
-        item.quantity < item.stock
-          ? {
-              ...item,
-              quantity:
-                item.quantity + 1,
-            }
-          : item,
-      ),
-    )
-  }
-
-
-  // ------------------------------------
-  // Disminuir cantidad
-  // ------------------------------------
-
-  const decreaseQuantity = (
-    id: number,
-  ) => {
-    setCart((currentCart) =>
-      currentCart
-        .map((item) =>
-          item.id === id
-            ? {
-                ...item,
-                quantity:
-                  item.quantity - 1,
-              }
-            : item,
-        )
-        .filter(
-          (item) =>
-            item.quantity > 0,
-        ),
-    )
-  }
-
-
-  // ------------------------------------
-  // Eliminar producto
-  // ------------------------------------
-
-  const removeProduct = (
-    id: number,
-  ) => {
-    setCart((currentCart) =>
-      currentCart.filter(
-        (item) => item.id !== id,
-      ),
-    )
-  }
-
-
-  // ====================================
-  // CANCELAR VENTA
-  // ====================================
-
-  const requestCancelSale = () => {
-    if (cart.length === 0) {
-      return
     }
 
-    setShowCancelModal(true)
-  }
 
-  const closeCancelModal = () => {
-    setShowCancelModal(false)
-  }
+  // ==========================================================
+  // COMPROBANTE
+  // ==========================================================
 
-  const confirmCancelSale = () => {
-    setCart([])
-    setShowCancelModal(false)
-  }
-
-
-  // ====================================
-  // FINALIZAR VENTA
-  // ====================================
-
-  const requestFinishSale = () => {
-    if (cart.length === 0) {
-      return
-    }
-
-    setPaymentMethod('')
-    setCreditInstallments('')
-    setPrintError('')
-    setShowFinishModal(true)
-  }
-
-  const closeFinishModal = () => {
-    setShowFinishModal(false)
-  }
-
-  const confirmFinishSale = async () => {
-    if (!paymentMethod) {
-      return
-    }
-
-    try {
-      const createdSale =
-        await createSale({
-          items: cart.map((item) => ({
-            productId: item.id,
-            quantity: item.quantity,
-          })),
-          paymentMethod,
-          installments:
-            paymentMethod ===
-            'credito'
-              ? Number(
-                  creditInstallments,
-                )
-              : null,
-        })
-
-      // Volver a consultar productos para
-      // reflejar inmediatamente el stock real.
-      const updatedProducts =
-        await getProducts({
-          page,
-          limit: 25,
-          search:
-            debouncedSearch ||
-            undefined,
-        })
-
-      setProducts(
-        updatedProducts.data,
-      )
-
-      setPagination(
-        updatedProducts.pagination,
-      )
-      setCart([])
-      setShowFinishModal(false)
-      setPaymentMethod('')
-      setCreditInstallments('')
+  const closeReceiptModal =
+    () => {
       setCompletedSale(
-        createdSale,
-      )
-      setSaleCompleted(true)
-    } catch (error) {
-      console.error(
-        'Error registrando venta:',
-        error,
+        null,
       )
 
-      window.alert(
-        'No fue posible registrar la venta. Revisa el stock e inténtalo nuevamente.',
-      )
-    }
-  }
-
-  const closeReceiptModal = () => {
-    setCompletedSale(null)
-    setPrintError('')
-  }
-
-  const handlePrintReceipt = () => {
-    if (!completedSale) {
-      return
-    }
-
-    try {
       setPrintError('')
-
-      printSaleReceipt(
-        createdSaleToReceiptSale(
-          completedSale,
-        ),
-      )
-    } catch (error) {
-      console.error(
-        'Error imprimiendo comprobante:',
-        error,
-      )
-
-      setPrintError(
-        'No fue posible abrir la impresión. Revisa si el navegador bloqueó la ventana emergente.',
-      )
     }
-  }
 
+
+  const handlePrintReceipt =
+    () => {
+      if (!completedSale) {
+        return
+      }
+
+
+      try {
+        setPrintError('')
+
+        printSaleReceipt(
+          createdSaleToReceiptSale(
+            completedSale,
+          ),
+        )
+      } catch (error) {
+        console.error(
+          'Error imprimiendo comprobante:',
+          error,
+        )
+
+        setPrintError(
+          'No fue posible abrir la impresión. Revisa si el navegador bloqueó la ventana emergente.',
+        )
+      }
+    }
+
+
+  // ==========================================================
+  // RENDER
+  // ==========================================================
 
   return (
     <section>
@@ -487,7 +1037,9 @@ function POS() {
           <button
             type="button"
             onClick={() =>
-              setSaleCompleted(false)
+              setSaleCompleted(
+                false,
+              )
             }
             className="
               rounded-lg p-1
@@ -505,38 +1057,78 @@ function POS() {
 
         {/* Catálogo */}
         <div>
-          {/* Buscador */}
-          <div className="relative mb-6 max-w-xl">
-            <Search
-              size={20}
-              className="
-                absolute left-4 top-1/2
-                -translate-y-1/2
-                text-slate-400
-              "
-            />
+          {/* Buscador + Producto temporal */}
+          <div
+            className="
+              mb-6
+              flex flex-col
+              gap-3
+              lg:flex-row
+              lg:items-center
+              lg:justify-between
+            "
+          >
+            <div className="relative w-full max-w-xl">
+              <Search
+                size={20}
+                className="
+                  absolute left-4 top-1/2
+                  -translate-y-1/2
+                  text-slate-400
+                "
+              />
 
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => {
-                setSearch(
-                  event.target.value,
-                )
-                setPage(1)
-              }}
-              placeholder="Buscar producto..."
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => {
+                  setSearch(
+                    event.target.value,
+                  )
+
+                  setPage(1)
+                }}
+                placeholder="Buscar producto..."
+                className="
+                  w-full rounded-xl
+                  border border-slate-200
+                  bg-white
+                  py-3 pl-12 pr-4
+                  outline-none
+                  focus:border-blue-400
+                  focus:ring-2
+                  focus:ring-blue-100
+                "
+              />
+            </div>
+
+
+            <button
+              type="button"
+              onClick={
+                openTemporaryProductModal
+              }
               className="
-                w-full rounded-xl
-                border border-slate-200
-                bg-white
-                py-3 pl-12 pr-4
-                outline-none
-                focus:border-blue-400
-                focus:ring-2
-                focus:ring-blue-100
+                inline-flex
+                shrink-0
+                items-center
+                justify-center
+                gap-2
+                rounded-xl
+                border
+                border-blue-200
+                bg-blue-50
+                px-4 py-3
+                font-medium
+                text-blue-700
+                transition
+                hover:bg-blue-100
               "
-            />
+            >
+              <Plus size={18} />
+
+              Producto temporal
+            </button>
           </div>
 
 
@@ -571,6 +1163,7 @@ function POS() {
                       text-blue-600
                     "
                   />
+
                   <p className="mt-3 text-sm text-slate-500">
                     Cargando productos...
                   </p>
@@ -578,16 +1171,34 @@ function POS() {
               </div>
             ) : products.length > 0 ? (
               products.map(
-                (product) => (
+                (
+                  product,
+                ) => (
                   <PosProductCard
-                    key={product.id}
-                    id={product.id}
-                    name={product.name}
-                    brand={product.brand}
-                    price={product.price}
-                    stock={product.stock}
-                    image={product.image}
-                    onAdd={addProduct}
+                    key={
+                      product.id
+                    }
+                    id={
+                      product.id
+                    }
+                    name={
+                      product.name
+                    }
+                    brand={
+                      product.brand
+                    }
+                    price={
+                      product.price
+                    }
+                    stock={
+                      product.stock
+                    }
+                    image={
+                      product.image
+                    }
+                    onAdd={
+                      addProduct
+                    }
                   />
                 ),
               )
@@ -609,8 +1220,10 @@ function POS() {
             )}
           </div>
 
+
           {!productsLoading &&
-            pagination.total > 0 && (
+            pagination.total >
+              0 && (
               <div
                 className="
                   mt-6
@@ -626,7 +1239,8 @@ function POS() {
                 "
               >
                 <p className="text-sm text-slate-500">
-                  {(pagination.page - 1) *
+                  {(pagination.page -
+                    1) *
                     pagination.limit +
                     1}
                   –
@@ -636,15 +1250,20 @@ function POS() {
                     pagination.total,
                   )}{' '}
                   de{' '}
-                  {pagination.total}
+                  {
+                    pagination.total
+                  }
                 </p>
+
 
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() =>
                       setPage(
-                        (currentPage) =>
+                        (
+                          currentPage,
+                        ) =>
                           Math.max(
                             1,
                             currentPage -
@@ -673,21 +1292,29 @@ function POS() {
                     <ChevronLeft
                       size={16}
                     />
+
                     Anterior
                   </button>
 
+
                   <span className="text-sm font-medium text-slate-600">
-                    {pagination.page}/
+                    {
+                      pagination.page
+                    }
+                    /
                     {
                       pagination.totalPages
                     }
                   </span>
 
+
                   <button
                     type="button"
                     onClick={() =>
                       setPage(
-                        (currentPage) =>
+                        (
+                          currentPage,
+                        ) =>
                           currentPage +
                           1,
                       )
@@ -711,6 +1338,7 @@ function POS() {
                     "
                   >
                     Siguiente
+
                     <ChevronRight
                       size={16}
                     />
@@ -724,18 +1352,425 @@ function POS() {
         {/* Venta actual */}
         <Cart
           items={cart}
-          onIncrease={increaseQuantity}
-          onDecrease={decreaseQuantity}
-          onRemove={removeProduct}
-          onCancel={requestCancelSale}
-          onFinish={requestFinishSale}
+          onIncrease={
+            increaseQuantity
+          }
+          onDecrease={
+            decreaseQuantity
+          }
+          onRemove={
+            removeProduct
+          }
+          onCancel={
+            requestCancelSale
+          }
+          onFinish={
+            requestFinishSale
+          }
         />
       </div>
 
 
-      {/* ==================================
+      {/* ======================================================
+          MODAL PRODUCTO TEMPORAL
+      ====================================================== */}
+
+      {showTemporaryProductModal && (
+        <div
+          className="
+            fixed inset-0 z-50
+            flex items-center justify-center
+            bg-slate-950/50
+            p-4
+          "
+        >
+          <div
+            className="
+              w-full max-w-lg
+              rounded-2xl
+              bg-white
+              shadow-xl
+            "
+          >
+            {/* Cabecera */}
+            <div
+              className="
+                flex
+                items-start
+                justify-between
+                border-b
+                border-slate-200
+                p-6
+              "
+            >
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900">
+                  Producto temporal
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Agrégalo solo a esta venta. No se guardará en el inventario ni modificará stock.
+                </p>
+              </div>
+
+
+              <button
+                type="button"
+                onClick={
+                  closeTemporaryProductModal
+                }
+                className="
+                  rounded-lg p-2
+                  text-slate-400
+                  transition
+                  hover:bg-slate-100
+                  hover:text-slate-600
+                "
+                aria-label="Cerrar producto temporal"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+
+            {/* Formulario */}
+            <div className="space-y-5 p-6">
+              <div>
+                <label
+                  htmlFor="temporary-product-name"
+                  className="
+                    mb-2 block
+                    text-sm font-medium
+                    text-slate-700
+                  "
+                >
+                  Nombre del producto
+                </label>
+
+                <input
+                  id="temporary-product-name"
+                  type="text"
+                  maxLength={100}
+                  value={
+                    temporaryProductForm.name
+                  }
+                  onChange={(event) =>
+                    setTemporaryProductForm(
+                      (
+                        current,
+                      ) => ({
+                        ...current,
+                        name:
+                          event.target
+                            .value,
+                      }),
+                    )
+                  }
+                  placeholder="Ej: Alternador especial"
+                  className="
+                    w-full rounded-xl
+                    border border-slate-300
+                    bg-white
+                    px-4 py-3
+                    outline-none
+                    transition
+                    focus:border-blue-500
+                    focus:ring-2
+                    focus:ring-blue-100
+                  "
+                />
+              </div>
+
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label
+                    htmlFor="temporary-product-net-price"
+                    className="
+                      mb-2 block
+                      text-sm font-medium
+                      text-slate-700
+                    "
+                  >
+                    Valor neto
+                  </label>
+
+                  <input
+                    id="temporary-product-net-price"
+                    type="text"
+                    inputMode="numeric"
+                    value={
+                      temporaryProductForm.netPrice
+                    }
+                    onChange={(event) =>
+                      setTemporaryProductForm(
+                        (
+                          current,
+                        ) => ({
+                          ...current,
+                          netPrice:
+                            event.target
+                              .value
+                              .replace(
+                                /\D/g,
+                                '',
+                              ),
+                        }),
+                      )
+                    }
+                    placeholder="80000"
+                    className="
+                      w-full rounded-xl
+                      border border-slate-300
+                      bg-white
+                      px-4 py-3
+                      outline-none
+                      transition
+                      focus:border-blue-500
+                      focus:ring-2
+                      focus:ring-blue-100
+                    "
+                  />
+                </div>
+
+
+                <div>
+                  <label
+                    htmlFor="temporary-product-tax-price"
+                    className="
+                      mb-2 block
+                      text-sm font-medium
+                      text-slate-700
+                    "
+                  >
+                    Valor con IVA
+                  </label>
+
+                  <input
+                    id="temporary-product-tax-price"
+                    type="text"
+                    readOnly
+                    value={
+                      temporaryPriceWithTax >
+                      0
+                        ? temporaryPriceWithTax.toLocaleString(
+                            'es-CL',
+                          )
+                        : ''
+                    }
+                    placeholder="Se calcula automáticamente"
+                    className="
+                      w-full rounded-xl
+                      border border-slate-200
+                      bg-slate-50
+                      px-4 py-3
+                      text-slate-600
+                      outline-none
+                    "
+                  />
+                </div>
+              </div>
+
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label
+                    htmlFor="temporary-product-sale-price"
+                    className="
+                      mb-2 block
+                      text-sm font-medium
+                      text-slate-700
+                    "
+                  >
+                    Valor de venta
+                  </label>
+
+                  <input
+                    id="temporary-product-sale-price"
+                    type="text"
+                    inputMode="numeric"
+                    value={
+                      temporaryProductForm.salePrice
+                    }
+                    onChange={(event) =>
+                      setTemporaryProductForm(
+                        (
+                          current,
+                        ) => ({
+                          ...current,
+                          salePrice:
+                            event.target
+                              .value
+                              .replace(
+                                /\D/g,
+                                '',
+                              ),
+                        }),
+                      )
+                    }
+                    placeholder="115000"
+                    className="
+                      w-full rounded-xl
+                      border border-slate-300
+                      bg-white
+                      px-4 py-3
+                      outline-none
+                      transition
+                      focus:border-blue-500
+                      focus:ring-2
+                      focus:ring-blue-100
+                    "
+                  />
+                </div>
+
+
+                <div>
+                  <label
+                    htmlFor="temporary-product-quantity"
+                    className="
+                      mb-2 block
+                      text-sm font-medium
+                      text-slate-700
+                    "
+                  >
+                    Cantidad vendida
+                  </label>
+
+                  <input
+                    id="temporary-product-quantity"
+                    type="text"
+                    inputMode="numeric"
+                    value={
+                      temporaryProductForm.quantity
+                    }
+                    onChange={(event) =>
+                      setTemporaryProductForm(
+                        (
+                          current,
+                        ) => ({
+                          ...current,
+                          quantity:
+                            event.target
+                              .value
+                              .replace(
+                                /\D/g,
+                                '',
+                              ),
+                        }),
+                      )
+                    }
+                    placeholder="1"
+                    className="
+                      w-full rounded-xl
+                      border border-slate-300
+                      bg-white
+                      px-4 py-3
+                      outline-none
+                      transition
+                      focus:border-blue-500
+                      focus:ring-2
+                      focus:ring-blue-100
+                    "
+                  />
+                </div>
+              </div>
+
+
+              <div
+                className="
+                  rounded-xl
+                  border border-blue-100
+                  bg-blue-50
+                  px-4 py-3
+                "
+              >
+                <p className="text-sm text-blue-700">
+                  El IVA corresponde al 19% y se vuelve a calcular en el servidor al registrar la venta.
+                </p>
+              </div>
+
+
+              {temporaryProductError && (
+                <div
+                  className="
+                    rounded-xl
+                    border border-red-200
+                    bg-red-50
+                    px-4 py-3
+                    text-sm
+                    text-red-700
+                  "
+                >
+                  {
+                    temporaryProductError
+                  }
+                </div>
+              )}
+            </div>
+
+
+            {/* Botones */}
+            <div
+              className="
+                flex gap-3
+                border-t
+                border-slate-200
+                p-6
+              "
+            >
+              <button
+                type="button"
+                onClick={
+                  closeTemporaryProductModal
+                }
+                className="
+                  flex-1
+                  rounded-xl
+                  border border-slate-300
+                  bg-white
+                  px-4 py-3
+                  font-medium
+                  text-slate-700
+                  transition
+                  hover:bg-slate-50
+                "
+              >
+                Cancelar
+              </button>
+
+
+              <button
+                type="button"
+                onClick={
+                  addTemporaryProduct
+                }
+                className="
+                  flex flex-1
+                  items-center
+                  justify-center
+                  gap-2
+                  rounded-xl
+                  bg-blue-600
+                  px-4 py-3
+                  font-medium
+                  text-white
+                  transition
+                  hover:bg-blue-700
+                "
+              >
+                <Plus size={18} />
+
+                Agregar a la venta
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* ======================================================
           MODAL FINALIZAR VENTA
-      ================================== */}
+      ====================================================== */}
 
       {showFinishModal && (
         <div
@@ -773,15 +1808,22 @@ function POS() {
                 </p>
               </div>
 
+
               <button
                 type="button"
-                onClick={closeFinishModal}
+                onClick={
+                  closeFinishModal
+                }
+                disabled={
+                  saleSubmitting
+                }
                 className="
                   rounded-lg p-2
                   text-slate-400
                   transition
                   hover:bg-slate-100
                   hover:text-slate-600
+                  disabled:opacity-50
                 "
               >
                 <X size={20} />
@@ -797,43 +1839,74 @@ function POS() {
                 px-6
               "
             >
-              {cart.map((item) => (
-                <div
-                  key={item.id}
-                  className="
-                    flex items-center
-                    justify-between
-                    gap-4
-                    border-b
-                    border-slate-100
-                    py-4
-                    last:border-b-0
-                  "
-                >
-                  <div>
-                    <p className="font-medium text-slate-900">
-                      {item.name}
-                    </p>
+              {cart.map(
+                (
+                  item,
+                ) => (
+                  <div
+                    key={
+                      item.id
+                    }
+                    className="
+                      flex items-center
+                      justify-between
+                      gap-4
+                      border-b
+                      border-slate-100
+                      py-4
+                      last:border-b-0
+                    "
+                  >
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium text-slate-900">
+                          {
+                            item.name
+                          }
+                        </p>
 
-                    <p className="mt-1 text-sm text-slate-500">
-                      {item.quantity} × $
-                      {item.price.toLocaleString(
+                        {item.itemType ===
+                          'temporary' && (
+                          <span
+                            className="
+                              rounded-full
+                              bg-amber-100
+                              px-2 py-0.5
+                              text-[11px]
+                              font-semibold
+                              uppercase
+                              tracking-wide
+                              text-amber-700
+                            "
+                          >
+                            Temporal
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="mt-1 text-sm text-slate-500">
+                        {
+                          item.quantity
+                        }{' '}
+                        × $
+                        {item.price.toLocaleString(
+                          'es-CL',
+                        )}
+                      </p>
+                    </div>
+
+                    <p className="font-semibold text-slate-900">
+                      $
+                      {(
+                        item.price *
+                        item.quantity
+                      ).toLocaleString(
                         'es-CL',
                       )}
                     </p>
                   </div>
-
-                  <p className="font-semibold text-slate-900">
-                    $
-                    {(
-                      item.price *
-                      item.quantity
-                    ).toLocaleString(
-                      'es-CL',
-                    )}
-                  </p>
-                </div>
-              ))}
+                ),
+              )}
             </div>
 
 
@@ -856,9 +1929,12 @@ function POS() {
                 Método de pago
               </label>
 
+
               <select
                 id="sale-payment-method"
-                value={paymentMethod}
+                value={
+                  paymentMethod
+                }
                 onChange={(event) => {
                   const value =
                     event.target.value as
@@ -878,6 +1954,9 @@ function POS() {
                     )
                   }
                 }}
+                disabled={
+                  saleSubmitting
+                }
                 className="
                   w-full rounded-xl
                   border border-slate-300
@@ -888,6 +1967,7 @@ function POS() {
                   focus:border-blue-500
                   focus:ring-2
                   focus:ring-blue-100
+                  disabled:bg-slate-50
                 "
               >
                 <option value="">
@@ -895,7 +1975,9 @@ function POS() {
                 </option>
 
                 {PAYMENT_METHOD_OPTIONS.map(
-                  (option) => (
+                  (
+                    option,
+                  ) => (
                     <option
                       key={
                         option.value
@@ -912,9 +1994,11 @@ function POS() {
                 )}
               </select>
 
+
               <p className="mt-1 text-xs text-slate-500">
                 Debes seleccionarlo antes de registrar la venta.
               </p>
+
 
               {paymentMethod ===
                 'credito' && (
@@ -930,6 +2014,7 @@ function POS() {
                     Cuotas
                   </label>
 
+
                   <select
                     id="sale-credit-installments"
                     value={
@@ -939,13 +2024,16 @@ function POS() {
                       setCreditInstallments(
                         event.target
                           .value ===
-                        ''
+                          ''
                           ? ''
                           : Number(
                               event.target
                                 .value,
                             ),
                       )
+                    }
+                    disabled={
+                      saleSubmitting
                     }
                     className="
                       w-full rounded-xl
@@ -957,11 +2045,13 @@ function POS() {
                       focus:border-blue-500
                       focus:ring-2
                       focus:ring-blue-100
+                      disabled:bg-slate-50
                     "
                   >
                     <option value="">
                       Selecciona las cuotas
                     </option>
+
 
                     {CREDIT_INSTALLMENT_OPTIONS.map(
                       (
@@ -1010,6 +2100,7 @@ function POS() {
                 </span>
               </div>
 
+
               <div
                 className="
                   mt-3 flex
@@ -1035,7 +2126,12 @@ function POS() {
             <div className="flex gap-3 p-6">
               <button
                 type="button"
-                onClick={closeFinishModal}
+                onClick={
+                  closeFinishModal
+                }
+                disabled={
+                  saleSubmitting
+                }
                 className="
                   flex-1
                   rounded-xl
@@ -1046,15 +2142,20 @@ function POS() {
                   text-slate-700
                   transition
                   hover:bg-slate-50
+                  disabled:opacity-50
                 "
               >
                 Volver
               </button>
 
+
               <button
                 type="button"
-                onClick={confirmFinishSale}
+                onClick={() =>
+                  void confirmFinishSale()
+                }
                 disabled={
+                  saleSubmitting ||
                   !paymentMethod ||
                   (
                     paymentMethod ===
@@ -1063,7 +2164,10 @@ function POS() {
                   )
                 }
                 className="
-                  flex-1
+                  flex flex-1
+                  items-center
+                  justify-center
+                  gap-2
                   rounded-xl
                   bg-blue-600
                   px-4 py-3
@@ -1075,7 +2179,16 @@ function POS() {
                   disabled:bg-slate-300
                 "
               >
-                Confirmar venta
+                {saleSubmitting && (
+                  <LoaderCircle
+                    size={18}
+                    className="animate-spin"
+                  />
+                )}
+
+                {saleSubmitting
+                  ? 'Registrando...'
+                  : 'Confirmar venta'}
               </button>
             </div>
           </div>
@@ -1083,9 +2196,9 @@ function POS() {
       )}
 
 
-      {/* ==================================
+      {/* ======================================================
           COMPROBANTE DE VENTA
-      ================================== */}
+      ====================================================== */}
 
       {completedSale && (
         <div
@@ -1130,7 +2243,9 @@ function POS() {
 
               <button
                 type="button"
-                onClick={closeReceiptModal}
+                onClick={
+                  closeReceiptModal
+                }
                 className="
                   rounded-lg p-2
                   text-slate-400
@@ -1143,6 +2258,7 @@ function POS() {
                 <X size={20} />
               </button>
             </div>
+
 
             <div
               className="
@@ -1161,16 +2277,20 @@ function POS() {
               />
             </div>
 
+
             {printError && (
               <p className="px-6 pt-4 text-sm text-red-600">
                 {printError}
               </p>
             )}
 
+
             <div className="flex gap-3 p-6">
               <button
                 type="button"
-                onClick={closeReceiptModal}
+                onClick={
+                  closeReceiptModal
+                }
                 className="
                   flex-1
                   rounded-xl
@@ -1186,9 +2306,12 @@ function POS() {
                 Cerrar
               </button>
 
+
               <button
                 type="button"
-                onClick={handlePrintReceipt}
+                onClick={
+                  handlePrintReceipt
+                }
                 className="
                   flex flex-1
                   items-center
@@ -1203,7 +2326,10 @@ function POS() {
                   hover:bg-blue-700
                 "
               >
-                <Printer size={18} />
+                <Printer
+                  size={18}
+                />
+
                 Imprimir comprobante
               </button>
             </div>
@@ -1212,9 +2338,9 @@ function POS() {
       )}
 
 
-      {/* ==================================
+      {/* ======================================================
           MODAL CANCELAR VENTA
-      ================================== */}
+      ====================================================== */}
 
       {showCancelModal && (
         <div
@@ -1264,9 +2390,12 @@ function POS() {
                 </div>
               </div>
 
+
               <button
                 type="button"
-                onClick={closeCancelModal}
+                onClick={
+                  closeCancelModal
+                }
                 className="
                   rounded-lg
                   p-2
@@ -1303,7 +2432,9 @@ function POS() {
             <div className="mt-6 flex gap-3">
               <button
                 type="button"
-                onClick={closeCancelModal}
+                onClick={
+                  closeCancelModal
+                }
                 className="
                   flex-1
                   rounded-xl
@@ -1319,9 +2450,12 @@ function POS() {
                 Volver
               </button>
 
+
               <button
                 type="button"
-                onClick={confirmCancelSale}
+                onClick={
+                  confirmCancelSale
+                }
                 className="
                   flex-1
                   rounded-xl

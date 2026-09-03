@@ -5,8 +5,14 @@ import type {
 
 import { supabase } from '../lib/supabase'
 
+
+// ============================================================
+// MÉTODOS DE PAGO
+// ============================================================
+
 export type PaymentMethod =
   SchemaPaymentMethod
+
 
 export const PAYMENT_METHOD_OPTIONS: Array<{
   value: PaymentMethod
@@ -34,6 +40,7 @@ export const PAYMENT_METHOD_OPTIONS: Array<{
   },
 ]
 
+
 export const CREDIT_INSTALLMENT_OPTIONS =
   Array.from(
     {
@@ -42,6 +49,7 @@ export const CREDIT_INSTALLMENT_OPTIONS =
     (_, index) =>
       index + 1,
   )
+
 
 export function getPaymentMethodLabel(
   paymentMethod:
@@ -62,6 +70,7 @@ export function getPaymentMethodLabel(
     'No registrado'
   )
 }
+
 
 export function getPaymentDescription(
   paymentMethod:
@@ -85,9 +94,7 @@ export function getPaymentDescription(
     return label
   }
 
-  if (
-    !installments
-  ) {
+  if (!installments) {
     return `${label} · cuotas no registradas`
   }
 
@@ -98,134 +105,268 @@ export function getPaymentDescription(
   }`
 }
 
-export type CreateSaleItem = {
-  productId: number
-  quantity: number
-}
+
+// ============================================================
+// ITEMS ENVIADOS AL CREAR UNA VENTA
+// ============================================================
+
+export type CreateSaleItem =
+  CreateSaleInput['items'][number]
+
 
 export type CreateSalePayload =
   CreateSaleInput
 
-export type CreatedSale = {
-  id: number
-  sellerId: string
-  sellerEmail: string | null
-  soldAt: string
-  total: number
-  paymentMethod: PaymentMethod
-  installments: number | null
-  items: Array<{
-    productId: number
-    productName: string
-    unitPrice: number
-    quantity: number
-    subtotal: number
-  }>
+
+// ============================================================
+// TIPOS DEVUELTOS POR POSTGRESQL
+// ============================================================
+
+export type SaleItemType =
+  | 'inventory'
+  | 'temporary'
+
+
+export type CreatedSaleItem = {
+  itemType: SaleItemType
+
+  productId:
+    | number
+    | null
+
+  productName: string
+
+  netPrice:
+    | number
+    | null
+
+  priceWithTax:
+    | number
+    | null
+
+  unitPrice: number
+
+  quantity: number
+
+  subtotal: number
 }
 
+
+export type CreatedSale = {
+  id: number
+
+  sellerId: string
+
+  sellerEmail:
+    | string
+    | null
+
+  soldAt: string
+
+  total: number
+
+  paymentMethod:
+    PaymentMethod
+
+  installments:
+    | number
+    | null
+
+  items:
+    CreatedSaleItem[]
+}
+
+
 export type SaleItem = {
-  productId: number | null
+  productId:
+    | number
+    | null
+
+  itemType:
+    SaleItemType
+
   name: string
+
+  netPrice:
+    | number
+    | null
+
+  priceWithTax:
+    | number
+    | null
+
   quantity: number
+
   unitPrice: number
 }
 
+
 export type Sale = {
   id: number
+
   seller: string
+
   soldAt: string
+
   total: number
+
   paymentMethod:
     | PaymentMethod
     | null
+
   installments:
     | number
     | null
-  items: SaleItem[]
+
+  items:
+    SaleItem[]
 }
+
+
+// ============================================================
+// COMPROBANTE
+//
+// Se conserva simple para no alterar el diseño actual.
+// itemType queda disponible para distinguir visualmente
+// productos temporales si más adelante se desea.
+// ============================================================
 
 export type ReceiptSale = {
   id: number
+
   seller: string
+
   soldAt: string
+
   total: number
+
   paymentMethod:
     | PaymentMethod
     | null
+
   installments:
     | number
     | null
+
   items: Array<{
+    itemType:
+      SaleItemType
+
     name: string
+
     quantity: number
+
     unitPrice: number
   }>
 }
+
 
 export function createdSaleToReceiptSale(
   sale: CreatedSale,
 ): ReceiptSale {
   return {
     id: sale.id,
+
     seller:
       sale.sellerEmail ??
       'Usuario',
-    soldAt: sale.soldAt,
-    total: sale.total,
+
+    soldAt:
+      sale.soldAt,
+
+    total:
+      sale.total,
+
     paymentMethod:
       sale.paymentMethod,
+
     installments:
       sale.installments,
-    items: sale.items.map(
-      (item) => ({
-        name:
-          item.productName,
-        quantity:
-          item.quantity,
-        unitPrice:
-          item.unitPrice,
-      }),
-    ),
+
+    items:
+      sale.items.map(
+        (item) => ({
+          itemType:
+            item.itemType,
+
+          name:
+            item.productName,
+
+          quantity:
+            item.quantity,
+
+          unitPrice:
+            item.unitPrice,
+        }),
+      ),
   }
 }
+
 
 export function saleToReceiptSale(
   sale: Sale,
 ): ReceiptSale {
   return {
-    id: sale.id,
-    seller: sale.seller,
-    soldAt: sale.soldAt,
-    total: sale.total,
+    id:
+      sale.id,
+
+    seller:
+      sale.seller,
+
+    soldAt:
+      sale.soldAt,
+
+    total:
+      sale.total,
+
     paymentMethod:
       sale.paymentMethod,
+
     installments:
       sale.installments,
-    items: sale.items.map(
-      (item) => ({
-        name: item.name,
-        quantity:
-          item.quantity,
-        unitPrice:
-          item.unitPrice,
-      }),
-    ),
+
+    items:
+      sale.items.map(
+        (item) => ({
+          itemType:
+            item.itemType,
+
+          name:
+            item.name,
+
+          quantity:
+            item.quantity,
+
+          unitPrice:
+            item.unitPrice,
+        }),
+      ),
   }
 }
 
 
-const SALES_CACHE_TTL_MS = 10_000
+// ============================================================
+// CACHE
+// ============================================================
+
+const SALES_CACHE_TTL_MS =
+  10_000
+
 
 let salesCache:
   | {
       data: Sale[]
       expiresAt: number
     }
-  | null = null
+  | null =
+  null
+
 
 let salesRequest:
   | Promise<Sale[]>
-  | null = null
+  | null =
+  null
+
 
 const salesRangeCache =
   new Map<
@@ -235,6 +376,7 @@ const salesRangeCache =
       expiresAt: number
     }
   >()
+
 
 const salesRangeRequests =
   new Map<
@@ -246,9 +388,15 @@ const salesRangeRequests =
 export function invalidateSalesCache() {
   salesCache = null
   salesRequest = null
+
   salesRangeCache.clear()
   salesRangeRequests.clear()
 }
+
+
+// ============================================================
+// ERRORES RPC
+// ============================================================
 
 function throwRpcError(
   operation: string,
@@ -270,17 +418,27 @@ function throwRpcError(
   )
 }
 
+
+// ============================================================
+// CREAR VENTA
+// ============================================================
+
 export async function createSale(
   input: CreateSalePayload,
 ) {
-  const { data, error } =
+  const {
+    data,
+    error,
+  } =
     await supabase.rpc(
       'cys_create_sale',
       {
         p_items:
           input.items,
+
         p_payment_method:
           input.paymentMethod,
+
         p_installments:
           input.paymentMethod ===
           'credito'
@@ -307,12 +465,19 @@ export async function createSale(
   return data as CreatedSale
 }
 
+
+// ============================================================
+// LISTAR VENTAS
+// ============================================================
+
 export async function getSales() {
-  const now = Date.now()
+  const now =
+    Date.now()
 
   if (
     salesCache &&
-    salesCache.expiresAt > now
+    salesCache.expiresAt >
+      now
   ) {
     return salesCache.data
   }
@@ -321,33 +486,41 @@ export async function getSales() {
     return salesRequest
   }
 
-  salesRequest = (async () => {
-    const { data, error } =
-      await supabase.rpc(
-        'cys_list_sales',
-      )
-
-    if (error) {
-      throwRpcError(
-        'cargar las ventas',
+  salesRequest =
+    (async () => {
+      const {
+        data,
         error,
-      )
-    }
+      } =
+        await supabase.rpc(
+          'cys_list_sales',
+        )
 
-    const sales =
-      (
-        data as Sale[] | null
-      ) ?? []
+      if (error) {
+        throwRpcError(
+          'cargar las ventas',
+          error,
+        )
+      }
 
-    salesCache = {
-      data: sales,
-      expiresAt:
-        Date.now() +
-        SALES_CACHE_TTL_MS,
-    }
+      const sales =
+        (
+          data as
+            | Sale[]
+            | null
+        ) ?? []
 
-    return sales
-  })()
+      salesCache = {
+        data:
+          sales,
+
+        expiresAt:
+          Date.now() +
+          SALES_CACHE_TTL_MS,
+      }
+
+      return sales
+    })()
 
   try {
     return await salesRequest
@@ -356,13 +529,22 @@ export async function getSales() {
   }
 }
 
+
+// ============================================================
+// VENTAS POR RANGO
+// ============================================================
+
 export async function getSalesRange(
   start: Date,
   end: Date,
 ) {
   if (
-    Number.isNaN(start.getTime()) ||
-    Number.isNaN(end.getTime()) ||
+    Number.isNaN(
+      start.getTime(),
+    ) ||
+    Number.isNaN(
+      end.getTime(),
+    ) ||
     start >= end
   ) {
     throw new Error(
@@ -370,59 +552,105 @@ export async function getSalesRange(
     )
   }
 
-  const startIso = start.toISOString()
-  const endIso = end.toISOString()
-  const key = `${startIso}|${endIso}`
-  const now = Date.now()
-  const cached = salesRangeCache.get(key)
+
+  const startIso =
+    start.toISOString()
+
+  const endIso =
+    end.toISOString()
+
+  const key =
+    `${startIso}|${endIso}`
+
+  const now =
+    Date.now()
+
+  const cached =
+    salesRangeCache.get(
+      key,
+    )
+
 
   if (
     cached &&
-    cached.expiresAt > now
+    cached.expiresAt >
+      now
   ) {
     return cached.data
   }
 
-  const pending = salesRangeRequests.get(key)
-  if (pending) return pending
 
-  const request = (async () => {
-    const { data, error } =
-      await supabase.rpc(
-        'cys_list_sales_range',
+  const pending =
+    salesRangeRequests.get(
+      key,
+    )
+
+  if (pending) {
+    return pending
+  }
+
+
+  const request =
+    (async () => {
+      const {
+        data,
+        error,
+      } =
+        await supabase.rpc(
+          'cys_list_sales_range',
+          {
+            p_start:
+              startIso,
+
+            p_end:
+              endIso,
+          },
+        )
+
+      if (error) {
+        throwRpcError(
+          'cargar las ventas del período',
+          error,
+        )
+      }
+
+
+      const sales =
+        (
+          data as
+            | Sale[]
+            | null
+        ) ?? []
+
+
+      salesRangeCache.set(
+        key,
         {
-          p_start: startIso,
-          p_end: endIso,
+          data:
+            sales,
+
+          expiresAt:
+            Date.now() +
+            SALES_CACHE_TTL_MS,
         },
       )
 
-    if (error) {
-      throwRpcError(
-        'cargar las ventas del período',
-        error,
-      )
-    }
 
-    const sales =
-      (data as Sale[] | null) ?? []
+      return sales
+    })()
 
-    salesRangeCache.set(
-      key,
-      {
-        data: sales,
-        expiresAt:
-          Date.now() + SALES_CACHE_TTL_MS,
-      },
-    )
 
-    return sales
-  })()
+  salesRangeRequests.set(
+    key,
+    request,
+  )
 
-  salesRangeRequests.set(key, request)
 
   try {
     return await request
   } finally {
-    salesRangeRequests.delete(key)
+    salesRangeRequests.delete(
+      key,
+    )
   }
 }
