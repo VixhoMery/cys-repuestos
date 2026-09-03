@@ -1,7 +1,14 @@
-import { useEffect, useMemo, useState } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
+
 import {
   CalendarDays,
+  Copy,
   Eye,
+  Phone,
   Printer,
   ReceiptText,
   Search,
@@ -26,15 +33,37 @@ function Sales() {
   // Estados
   // ------------------------------------
 
-  const [sales, setSales] =
+  const [
+    sales,
+    setSales,
+  ] =
     useState<Sale[]>([])
 
-  const [search, setSearch] = useState('')
-  const [selectedDate, setSelectedDate] =
+  const [
+    search,
+    setSearch,
+  ] =
     useState('')
 
-  const [selectedSale, setSelectedSale] =
-    useState<Sale | null>(null)
+  const [
+    selectedDate,
+    setSelectedDate,
+  ] =
+    useState('')
+
+  const [
+    selectedSale,
+    setSelectedSale,
+  ] =
+    useState<Sale | null>(
+      null,
+    )
+
+  const [
+    copiedPhone,
+    setCopiedPhone,
+  ] =
+    useState(false)
 
 
   // ------------------------------------
@@ -42,19 +71,20 @@ function Sales() {
   // ------------------------------------
 
   useEffect(() => {
-    const loadSales = async () => {
-      try {
-        const data =
-          await getSales()
+    const loadSales =
+      async () => {
+        try {
+          const data =
+            await getSales()
 
-        setSales(data)
-      } catch (error) {
-        console.error(
-          'Error cargando ventas:',
-          error,
-        )
+          setSales(data)
+        } catch (error) {
+          console.error(
+            'Error cargando ventas:',
+            error,
+          )
+        }
       }
-    }
 
     loadSales()
   }, [])
@@ -87,7 +117,9 @@ function Sales() {
         month: '2-digit',
         year: 'numeric',
       },
-    ).format(new Date(date))
+    ).format(
+      new Date(date),
+    )
   }
 
 
@@ -104,49 +136,142 @@ function Sales() {
         hour: '2-digit',
         minute: '2-digit',
       },
-    ).format(new Date(date))
+    ).format(
+      new Date(date),
+    )
   }
+
+
+  // ------------------------------------
+  // Copiar teléfono
+  // ------------------------------------
+
+  const copyCustomerPhone =
+    async (
+      phone: string,
+    ) => {
+      try {
+        await navigator.clipboard.writeText(
+          phone,
+        )
+
+        setCopiedPhone(
+          true,
+        )
+
+        window.setTimeout(
+          () => {
+            setCopiedPhone(
+              false,
+            )
+          },
+          1600,
+        )
+      } catch (error) {
+        console.error(
+          'Error copiando teléfono:',
+          error,
+        )
+      }
+    }
 
 
   // ------------------------------------
   // Filtrar ventas
   // ------------------------------------
 
-  const filteredSales = useMemo(
-    () => {
-      const query =
-        search.trim().toLowerCase()
-
-      return sales.filter((sale) => {
-        const matchesSearch =
-          query === '' ||
-          sale.seller
+  const filteredSales =
+    useMemo(
+      () => {
+        const query =
+          search
+            .trim()
             .toLowerCase()
-            .includes(query) ||
-          sale.id
-            .toString()
-            .includes(query) ||
-          sale.items.some((item) =>
-            item.name
-              .toLowerCase()
-              .includes(query),
+
+        const phoneQuery =
+          query.replace(
+            /\D/g,
+            '',
           )
 
-        const saleDate =
-          sale.soldAt.slice(0, 10)
+        return sales.filter(
+          (sale) => {
+            const customerName =
+              sale.customerName
+                ?.toLowerCase() ??
+              ''
 
-        const matchesDate =
-          selectedDate === '' ||
-          saleDate === selectedDate
+            const customerPhone =
+              sale.customerPhone
+                ?.toLowerCase() ??
+              ''
 
-        return (
-          matchesSearch &&
-          matchesDate
+            const customerPhoneDigits =
+              customerPhone.replace(
+                /\D/g,
+                '',
+              )
+
+            const matchesPhone =
+              phoneQuery.length >
+                0 &&
+              customerPhoneDigits.includes(
+                phoneQuery,
+              )
+
+            const matchesSearch =
+              query === '' ||
+              sale.seller
+                .toLowerCase()
+                .includes(
+                  query,
+                ) ||
+              sale.id
+                .toString()
+                .includes(
+                  query,
+                ) ||
+              customerName.includes(
+                query,
+              ) ||
+              customerPhone.includes(
+                query,
+              ) ||
+              matchesPhone ||
+              sale.items.some(
+                (item) =>
+                  item.name
+                    .toLowerCase()
+                    .includes(
+                      query,
+                    ),
+              )
+
+            const saleDate =
+              sale.soldAt.slice(
+                0,
+                10,
+              )
+
+            const matchesDate =
+              selectedDate ===
+                '' ||
+              saleDate ===
+                selectedDate
+
+            return (
+              matchesSearch &&
+              matchesDate
+            )
+          },
         )
-      })
-    },
-    [sales, search, selectedDate],
-  )
+      },
+      [
+        sales,
+        search,
+        selectedDate,
+      ],
+    )
 
 
   // ------------------------------------
@@ -155,8 +280,12 @@ function Sales() {
 
   const filteredTotal =
     filteredSales.reduce(
-      (accumulator, sale) =>
-        accumulator + sale.total,
+      (
+        accumulator,
+        sale,
+      ) =>
+        accumulator +
+        sale.total,
       0,
     )
 
@@ -170,8 +299,9 @@ function Sales() {
         </h1>
 
         <p className="mt-1 text-slate-500">
-          Revisa las ventas registradas
-          en el sistema.
+          Revisa las ventas
+          registradas en el
+          sistema.
         </p>
       </header>
 
@@ -186,7 +316,8 @@ function Sales() {
         <div
           className="
             rounded-2xl
-            border border-slate-200
+            border
+            border-slate-200
             bg-white
             p-5
             shadow-sm
@@ -196,22 +327,28 @@ function Sales() {
             <div
               className="
                 flex h-11 w-11
-                items-center justify-center
+                items-center
+                justify-center
                 rounded-xl
                 bg-blue-50
                 text-blue-600
               "
             >
-              <ReceiptText size={22} />
+              <ReceiptText
+                size={22}
+              />
             </div>
 
             <div>
               <p className="text-sm text-slate-500">
-                Ventas encontradas
+                Ventas
+                encontradas
               </p>
 
               <p className="text-2xl font-bold text-slate-900">
-                {filteredSales.length}
+                {
+                  filteredSales.length
+                }
               </p>
             </div>
           </div>
@@ -221,7 +358,8 @@ function Sales() {
         <div
           className="
             rounded-2xl
-            border border-slate-200
+            border
+            border-slate-200
             bg-white
             p-5
             shadow-sm
@@ -245,7 +383,8 @@ function Sales() {
         className="
           mb-6
           rounded-2xl
-          border border-slate-200
+          border
+          border-slate-200
           bg-white
           p-4
           shadow-sm
@@ -253,7 +392,8 @@ function Sales() {
       >
         <div
           className="
-            flex flex-col gap-4
+            flex flex-col
+            gap-4
             lg:flex-row
           "
         >
@@ -262,7 +402,8 @@ function Sales() {
             <Search
               size={19}
               className="
-                absolute left-4 top-1/2
+                absolute
+                left-4 top-1/2
                 -translate-y-1/2
                 text-slate-400
               "
@@ -271,15 +412,20 @@ function Sales() {
             <input
               type="search"
               value={search}
-              onChange={(event) =>
+              onChange={(
+                event,
+              ) =>
                 setSearch(
-                  event.target.value,
+                  event.target
+                    .value,
                 )
               }
-              placeholder="Buscar por vendedor, producto o número de venta..."
+              placeholder="Buscar por vendedor, producto, comprador, teléfono o número de venta..."
               className="
-                w-full rounded-xl
-                border border-slate-200
+                w-full
+                rounded-xl
+                border
+                border-slate-200
                 py-3 pl-11 pr-4
                 outline-none
                 transition
@@ -297,7 +443,8 @@ function Sales() {
               size={19}
               className="
                 pointer-events-none
-                absolute left-4 top-1/2
+                absolute
+                left-4 top-1/2
                 -translate-y-1/2
                 text-slate-400
               "
@@ -305,15 +452,22 @@ function Sales() {
 
             <input
               type="date"
-              value={selectedDate}
-              onChange={(event) =>
+              value={
+                selectedDate
+              }
+              onChange={(
+                event,
+              ) =>
                 setSelectedDate(
-                  event.target.value,
+                  event.target
+                    .value,
                 )
               }
               className="
-                w-full rounded-xl
-                border border-slate-200
+                w-full
+                rounded-xl
+                border
+                border-slate-200
                 py-3 pl-11 pr-4
                 outline-none
                 transition
@@ -327,17 +481,22 @@ function Sales() {
 
 
           {/* Limpiar filtros */}
-          {(search ||
-            selectedDate) && (
+          {(
+            search ||
+            selectedDate
+          ) && (
             <button
               type="button"
               onClick={() => {
                 setSearch('')
-                setSelectedDate('')
+                setSelectedDate(
+                  '',
+                )
               }}
               className="
                 rounded-xl
-                border border-slate-200
+                border
+                border-slate-200
                 px-5 py-3
                 font-medium
                 text-slate-600
@@ -357,7 +516,8 @@ function Sales() {
         className="
           overflow-hidden
           rounded-2xl
-          border border-slate-200
+          border
+          border-slate-200
           bg-white
           shadow-sm
         "
@@ -416,9 +576,18 @@ function Sales() {
                         0,
                       )
 
+                    const hasTemporaryItem =
+                      sale.items.some(
+                        (item) =>
+                          item.itemType ===
+                          'temporary',
+                      )
+
                     return (
                       <tr
-                        key={sale.id}
+                        key={
+                          sale.id
+                        }
                         className="
                           border-b
                           border-slate-100
@@ -428,7 +597,10 @@ function Sales() {
                       >
                         <td className="px-6 py-5">
                           <span className="font-semibold text-slate-900">
-                            #{sale.id}
+                            #
+                            {
+                              sale.id
+                            }
                           </span>
                         </td>
 
@@ -449,7 +621,9 @@ function Sales() {
                         <td className="px-6 py-5">
                           <div className="flex items-center gap-2">
                             <UserRound
-                              size={17}
+                              size={
+                                17
+                              }
                               className="text-slate-400"
                             />
 
@@ -462,12 +636,32 @@ function Sales() {
                         </td>
 
                         <td className="px-6 py-5">
-                          <p className="text-slate-700">
-                            {units}{' '}
-                            {units === 1
-                              ? 'producto'
-                              : 'productos'}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-slate-700">
+                              {
+                                units
+                              }{' '}
+                              {units ===
+                              1
+                                ? 'producto'
+                                : 'productos'}
+                            </p>
+
+                            {hasTemporaryItem && (
+                              <span
+                                className="
+                                  rounded-full
+                                  bg-amber-50
+                                  px-2 py-0.5
+                                  text-xs
+                                  font-medium
+                                  text-amber-700
+                                "
+                              >
+                                Temporal
+                              </span>
+                            )}
+                          </div>
 
                           <p className="mt-1 text-sm text-slate-500">
                             {
@@ -493,11 +687,15 @@ function Sales() {
                         <td className="px-6 py-5">
                           <button
                             type="button"
-                            onClick={() =>
+                            onClick={() => {
+                              setCopiedPhone(
+                                false,
+                              )
+
                               setSelectedSale(
                                 sale,
                               )
-                            }
+                            }}
                             className="
                               inline-flex
                               items-center
@@ -512,7 +710,9 @@ function Sales() {
                             "
                           >
                             <Eye
-                              size={17}
+                              size={
+                                17
+                              }
                             />
 
                             Ver
@@ -532,7 +732,8 @@ function Sales() {
                       text-slate-500
                     "
                   >
-                    No se encontraron
+                    No se
+                    encontraron
                     ventas.
                   </td>
                 </tr>
@@ -550,7 +751,8 @@ function Sales() {
       {selectedSale && (
         <div
           className="
-            fixed inset-0 z-50
+            fixed inset-0
+            z-50
             flex items-center
             justify-center
             bg-slate-950/50
@@ -585,30 +787,40 @@ function Sales() {
                   "
                 >
                   Venta #
-                  {selectedSale.id}
+                  {
+                    selectedSale.id
+                  }
                 </p>
 
                 <h2 className="mt-1 text-xl font-semibold text-slate-900">
-                  Detalle de venta
+                  Detalle de
+                  venta
                 </h2>
               </div>
 
               <button
                 type="button"
-                onClick={() =>
+                onClick={() => {
+                  setCopiedPhone(
+                    false,
+                  )
+
                   setSelectedSale(
                     null,
                   )
-                }
+                }}
                 className="
-                  rounded-lg p-2
+                  rounded-lg
+                  p-2
                   text-slate-400
                   transition
                   hover:bg-slate-100
                   hover:text-slate-600
                 "
               >
-                <X size={20} />
+                <X
+                  size={20}
+                />
               </button>
             </div>
 
@@ -616,7 +828,8 @@ function Sales() {
             {/* Información */}
             <div
               className="
-                grid grid-cols-2 gap-4
+                grid grid-cols-2
+                gap-4
                 border-b
                 border-slate-200
                 bg-slate-50
@@ -666,6 +879,109 @@ function Sales() {
             </div>
 
 
+            {/* Datos del comprador */}
+            {(
+              selectedSale.customerName ||
+              selectedSale.customerPhone
+            ) && (
+              <div
+                className="
+                  border-b
+                  border-slate-200
+                  bg-blue-50/60
+                  px-6 py-5
+                "
+              >
+                <div className="flex items-center gap-2">
+                  <UserRound
+                    size={18}
+                    className="text-blue-600"
+                  />
+
+                  <h3 className="font-semibold text-slate-900">
+                    Datos del
+                    comprador
+                  </h3>
+                </div>
+
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                      Nombre
+                    </p>
+
+                    <p className="mt-1 font-medium text-slate-800">
+                      {selectedSale.customerName ??
+                        'No registrado'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                      Teléfono
+                    </p>
+
+                    {selectedSale.customerPhone ? (
+                      <div className="mt-1 flex items-center gap-2">
+                        <Phone
+                          size={
+                            16
+                          }
+                          className="shrink-0 text-slate-400"
+                        />
+
+                        <a
+                          href={`tel:${selectedSale.customerPhone}`}
+                          className="font-medium text-blue-700 hover:underline"
+                        >
+                          {
+                            selectedSale.customerPhone
+                          }
+                        </a>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            copyCustomerPhone(
+                              selectedSale.customerPhone!,
+                            )
+                          }
+                          title="Copiar teléfono"
+                          className="
+                            rounded-md
+                            p-1.5
+                            text-slate-400
+                            transition
+                            hover:bg-white
+                            hover:text-blue-600
+                          "
+                        >
+                          <Copy
+                            size={
+                              15
+                            }
+                          />
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="mt-1 font-medium text-slate-800">
+                        No
+                        registrado
+                      </p>
+                    )}
+
+                    {copiedPhone && (
+                      <p className="mt-1 text-xs font-medium text-emerald-600">
+                        Teléfono
+                        copiado
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+
             {/* Productos */}
             <div
               className="
@@ -675,9 +991,12 @@ function Sales() {
               "
             >
               {selectedSale.items.map(
-                (item) => (
+                (
+                  item,
+                  index,
+                ) => (
                   <div
-                    key={`${item.productId ?? 'deleted'}-${item.name}`}
+                    key={`${item.productId ?? 'temporary'}-${item.name}-${index}`}
                     className="
                       flex
                       justify-between
@@ -689,9 +1008,29 @@ function Sales() {
                     "
                   >
                     <div>
-                      <p className="font-medium text-slate-900">
-                        {item.name}
-                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium text-slate-900">
+                          {
+                            item.name
+                          }
+                        </p>
+
+                        {item.itemType ===
+                          'temporary' && (
+                          <span
+                            className="
+                              rounded-full
+                              bg-amber-50
+                              px-2 py-0.5
+                              text-xs
+                              font-medium
+                              text-amber-700
+                            "
+                          >
+                            Temporal
+                          </span>
+                        )}
+                      </div>
 
                       <p className="mt-1 text-sm text-slate-500">
                         {
@@ -747,7 +1086,9 @@ function Sales() {
                           selectedSale,
                         ),
                       )
-                    } catch (error) {
+                    } catch (
+                      error
+                    ) {
                       console.error(
                         'Error imprimiendo comprobante:',
                         error,
@@ -772,17 +1113,25 @@ function Sales() {
                     hover:bg-blue-700
                   "
                 >
-                  <Printer size={18} />
-                  Imprimir comprobante
+                  <Printer
+                    size={18}
+                  />
+
+                  Imprimir
+                  comprobante
                 </button>
 
                 <button
                   type="button"
-                  onClick={() =>
+                  onClick={() => {
+                    setCopiedPhone(
+                      false,
+                    )
+
                     setSelectedSale(
                       null,
                     )
-                  }
+                  }}
                   className="
                     flex-1
                     rounded-xl
