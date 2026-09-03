@@ -36,6 +36,11 @@ import {
 } from '../api/sales'
 
 import {
+  getInventoryValuation,
+  type InventoryValuation,
+} from '../api/statistics'
+
+import {
   exportSalesReportCsv,
   printSalesReport,
 } from '../lib/salesReport'
@@ -189,6 +194,23 @@ function Statistics() {
   const [sales, setSales] =
     useState<Sale[]>([])
 
+  const [
+    inventoryValuation,
+    setInventoryValuation,
+  ] = useState<
+    InventoryValuation | null
+  >(null)
+
+  const [
+    inventoryValuationLoading,
+    setInventoryValuationLoading,
+  ] = useState(true)
+
+  const [
+    inventoryValuationError,
+    setInventoryValuationError,
+  ] = useState('')
+
   const today =
     new Date()
 
@@ -274,6 +296,62 @@ function Statistics() {
       cancelled = true
     }
   }, [statisticsRangeStart, statisticsRangeEnd])
+
+
+  // ------------------------------------
+  // Cargar valorización actual inventario
+  // ------------------------------------
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadInventoryValuation =
+      async () => {
+        try {
+          setInventoryValuationLoading(
+            true,
+          )
+
+          setInventoryValuationError(
+            '',
+          )
+
+          const data =
+            await getInventoryValuation()
+
+          if (!cancelled) {
+            setInventoryValuation(
+              data,
+            )
+          }
+        } catch (error) {
+          console.error(
+            'Error cargando valorización del inventario:',
+            error,
+          )
+
+          if (!cancelled) {
+            setInventoryValuationError(
+              error instanceof Error
+                ? error.message
+                : 'No fue posible cargar la valorización del inventario.',
+            )
+          }
+        } finally {
+          if (!cancelled) {
+            setInventoryValuationLoading(
+              false,
+            )
+          }
+        }
+      }
+
+    void loadInventoryValuation()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
 
   // ------------------------------------
@@ -1365,6 +1443,384 @@ function Statistics() {
             </div>
           </div>
         </div>
+      </div>
+
+
+      {/* --------------------------------
+          VALOR ACTUAL DEL INVENTARIO
+      -------------------------------- */}
+
+      <div
+        className="
+          mb-8
+          rounded-2xl
+          border border-slate-200
+          bg-white
+          p-6
+          shadow-sm
+        "
+      >
+        <div
+          className="
+            mb-6
+            flex flex-col
+            justify-between
+            gap-3
+            sm:flex-row
+            sm:items-start
+          "
+        >
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">
+              Valor actual del inventario
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Resumen actual del stock disponible. No depende del período de ventas seleccionado.
+            </p>
+          </div>
+
+          {inventoryValuation &&
+            !inventoryValuationLoading && (
+            <div className="text-left sm:text-right">
+              <p className="text-sm font-medium text-slate-700">
+                {inventoryValuation.productCount.toLocaleString(
+                  'es-CL',
+                )}{' '}
+                productos con stock
+              </p>
+
+              <p className="mt-1 text-xs text-slate-400">
+                {inventoryValuation.totalUnits.toLocaleString(
+                  'es-CL',
+                )}{' '}
+                unidades disponibles
+              </p>
+            </div>
+          )}
+        </div>
+
+
+        {inventoryValuationLoading ? (
+          <div
+            className="
+              flex min-h-36
+              items-center
+              justify-center
+              rounded-xl
+              border border-slate-100
+              bg-slate-50
+              text-sm
+              text-slate-500
+            "
+          >
+            Calculando valorización del inventario...
+          </div>
+        ) : inventoryValuationError ? (
+          <div
+            className="
+              rounded-xl
+              border border-red-200
+              bg-red-50
+              p-4
+              text-sm
+              text-red-700
+            "
+          >
+            {inventoryValuationError}
+          </div>
+        ) : inventoryValuation ? (
+          <>
+            <div
+              className="
+                grid gap-4
+                sm:grid-cols-2
+                xl:grid-cols-3
+              "
+            >
+              {/* Valor unitario promedio */}
+              <div
+                className="
+                  rounded-xl
+                  border border-slate-200
+                  bg-slate-50
+                  p-5
+                "
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm text-slate-500">
+                      Valor unitario promedio
+                    </p>
+
+                    <p className="mt-2 text-xl font-bold text-slate-900">
+                      {formatCurrency(
+                        inventoryValuation.averageUnitCostWithTax,
+                      )}
+                    </p>
+
+                    <p className="mt-2 text-xs text-slate-400">
+                      Costo promedio por unidad con IVA
+                    </p>
+                  </div>
+
+                  <div
+                    className="
+                      flex h-10 w-10
+                      shrink-0
+                      items-center
+                      justify-center
+                      rounded-xl
+                      bg-blue-50
+                      text-blue-600
+                    "
+                  >
+                    <ReceiptText size={20} />
+                  </div>
+                </div>
+              </div>
+
+
+              {/* Valor neto */}
+              <div
+                className="
+                  rounded-xl
+                  border border-slate-200
+                  bg-slate-50
+                  p-5
+                "
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm text-slate-500">
+                      Valor neto del inventario
+                    </p>
+
+                    <p className="mt-2 text-xl font-bold text-slate-900">
+                      {formatCurrency(
+                        inventoryValuation.netInventoryValue,
+                      )}
+                    </p>
+
+                    <p className="mt-2 text-xs text-slate-400">
+                      Capital invertido antes de IVA
+                    </p>
+                  </div>
+
+                  <div
+                    className="
+                      flex h-10 w-10
+                      shrink-0
+                      items-center
+                      justify-center
+                      rounded-xl
+                      bg-violet-50
+                      text-violet-600
+                    "
+                  >
+                    <BadgeDollarSign size={20} />
+                  </div>
+                </div>
+              </div>
+
+
+              {/* IVA */}
+              <div
+                className="
+                  rounded-xl
+                  border border-slate-200
+                  bg-slate-50
+                  p-5
+                "
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm text-slate-500">
+                      IVA del inventario
+                    </p>
+
+                    <p className="mt-2 text-xl font-bold text-slate-900">
+                      {formatCurrency(
+                        inventoryValuation.inventoryVatValue,
+                      )}
+                    </p>
+
+                    <p className="mt-2 text-xs text-slate-400">
+                      IVA asociado al costo actual
+                    </p>
+                  </div>
+
+                  <div
+                    className="
+                      flex h-10 w-10
+                      shrink-0
+                      items-center
+                      justify-center
+                      rounded-xl
+                      bg-amber-50
+                      text-amber-600
+                    "
+                  >
+                    <CreditCard size={20} />
+                  </div>
+                </div>
+              </div>
+
+
+              {/* Inversión con IVA */}
+              <div
+                className="
+                  rounded-xl
+                  border border-slate-200
+                  bg-slate-50
+                  p-5
+                "
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm text-slate-500">
+                      Inversión total con IVA
+                    </p>
+
+                    <p className="mt-2 text-xl font-bold text-slate-900">
+                      {formatCurrency(
+                        inventoryValuation.inventoryCostWithTax,
+                      )}
+                    </p>
+
+                    <p className="mt-2 text-xs text-slate-400">
+                      Desembolso bruto del stock actual
+                    </p>
+                  </div>
+
+                  <div
+                    className="
+                      flex h-10 w-10
+                      shrink-0
+                      items-center
+                      justify-center
+                      rounded-xl
+                      bg-blue-50
+                      text-blue-600
+                    "
+                  >
+                    <ShoppingBasket size={20} />
+                  </div>
+                </div>
+              </div>
+
+
+              {/* Venta potencial */}
+              <div
+                className="
+                  rounded-xl
+                  border border-slate-200
+                  bg-slate-50
+                  p-5
+                "
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm text-slate-500">
+                      Valor potencial de venta
+                    </p>
+
+                    <p className="mt-2 text-xl font-bold text-slate-900">
+                      {formatCurrency(
+                        inventoryValuation.potentialSalesValue,
+                      )}
+                    </p>
+
+                    <p className="mt-2 text-xs text-slate-400">
+                      Si se vende todo al precio actual
+                    </p>
+                  </div>
+
+                  <div
+                    className="
+                      flex h-10 w-10
+                      shrink-0
+                      items-center
+                      justify-center
+                      rounded-xl
+                      bg-green-50
+                      text-green-600
+                    "
+                  >
+                    <BadgeDollarSign size={20} />
+                  </div>
+                </div>
+              </div>
+
+
+              {/* Ganancia potencial */}
+              <div
+                className="
+                  rounded-xl
+                  border border-green-200
+                  bg-green-50
+                  p-5
+                "
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm text-green-700">
+                      Ganancia bruta potencial
+                    </p>
+
+                    <p
+                      className={`
+                        mt-2 text-xl font-bold
+                        ${
+                          inventoryValuation.potentialProfit >= 0
+                            ? 'text-green-700'
+                            : 'text-red-700'
+                        }
+                      `}
+                    >
+                      {formatCurrency(
+                        inventoryValuation.potentialProfit,
+                      )}
+                    </p>
+
+                    <p className="mt-2 text-xs text-green-700/70">
+                      Estimación neta de IVA, antes de gastos operacionales
+                    </p>
+                  </div>
+
+                  <div
+                    className="
+                      flex h-10 w-10
+                      shrink-0
+                      items-center
+                      justify-center
+                      rounded-xl
+                      bg-white
+                      text-green-600
+                    "
+                  >
+                    <TrendingUp size={20} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+
+            <div
+              className="
+                mt-5
+                rounded-xl
+                border border-slate-200
+                bg-white
+                px-4 py-3
+              "
+            >
+              <p className="text-xs leading-5 text-slate-500">
+                La ganancia es una estimación bruta calculada con los precios actuales del sistema. El IVA no se considera ganancia y el cálculo no descuenta gastos operacionales, comisiones, descuentos ni otros costos del negocio.
+              </p>
+            </div>
+          </>
+        ) : null}
       </div>
 
 
