@@ -1174,7 +1174,7 @@ function POS() {
 
                   setPage(1)
                 }}
-                placeholder="Buscar producto..."
+                placeholder="Buscar por nombre, marca o SKU..."
                 className="
                   w-full rounded-xl
                   border border-slate-200
@@ -1272,6 +1272,9 @@ function POS() {
                     }
                     brand={
                       product.brand
+                    }
+                    sku={
+                      product.sku
                     }
                     price={
                       product.price

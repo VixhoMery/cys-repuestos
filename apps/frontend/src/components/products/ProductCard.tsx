@@ -16,6 +16,7 @@ type ProductCardProps = {
   id: number
   name: string
   brand: string
+  sku?: string
   price: number
   stock: number
   shortDescription: string
@@ -34,6 +35,7 @@ function ProductCard({
   id,
   name,
   brand,
+  sku,
   price,
   stock,
   shortDescription,
@@ -94,7 +96,7 @@ function ProductCard({
 
       <div className="relative p-4">
         <div className="flex items-start justify-between gap-2">
-          <div>
+          <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
               {brand}
             </p>
@@ -102,6 +104,12 @@ function ProductCard({
             <h3 className="mt-1 font-semibold text-slate-900">
               {name}
             </h3>
+
+            {sku && (
+              <p className="mt-1 break-all text-xs font-medium text-slate-400">
+                SKU: {sku}
+              </p>
+            )}
           </div>
 
           {showMenu && (

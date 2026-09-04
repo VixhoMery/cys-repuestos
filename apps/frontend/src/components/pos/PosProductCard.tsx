@@ -2,6 +2,7 @@ type PosProductCardProps = {
   id: number
   name: string
   brand: string
+  sku?: string
   price: number
   stock: number
   image?: string
@@ -12,18 +13,22 @@ function PosProductCard({
   id,
   name,
   brand,
+  sku,
   price,
   stock,
   image,
   onAdd,
 }: PosProductCardProps) {
-  const outOfStock = stock === 0
+  const outOfStock =
+    stock === 0
 
   return (
     <button
       type="button"
       disabled={outOfStock}
-      onClick={() => onAdd(id)}
+      onClick={() =>
+        onAdd(id)
+      }
       className="
         group overflow-hidden rounded-xl
         border border-slate-200
@@ -62,8 +67,17 @@ function PosProductCard({
           {name}
         </h3>
 
+        {sku && (
+          <p className="mt-1 break-all text-xs font-medium text-slate-400">
+            SKU: {sku}
+          </p>
+        )}
+
         <p className="mt-3 text-xl font-bold text-slate-900">
-          ${price.toLocaleString('es-CL')}
+          $
+          {price.toLocaleString(
+            'es-CL',
+          )}
         </p>
 
         <p

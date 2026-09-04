@@ -34,6 +34,23 @@ import {
 } from '../../context/AuthContext'
 
 
+const PRODUCTS_SEARCH_STORAGE_KEY =
+  'cys-products-search'
+
+
+function getStoredProductsSearch() {
+  try {
+    return (
+      window.sessionStorage.getItem(
+        PRODUCTS_SEARCH_STORAGE_KEY,
+      ) ?? ''
+    )
+  } catch {
+    return ''
+  }
+}
+
+
 function Products() {
   const navigate = useNavigate()
 
@@ -84,7 +101,9 @@ function Products() {
   // ------------------------------------
 
   const [search, setSearch] =
-    useState('')
+    useState(
+      getStoredProductsSearch,
+    )
 
   const [
     selectedCategory,
@@ -94,7 +113,11 @@ function Products() {
   const [
     debouncedSearch,
     setDebouncedSearch,
-  ] = useState('')
+  ] = useState(
+    () =>
+      getStoredProductsSearch()
+        .trim(),
+  )
 
 
   // ------------------------------------
@@ -121,6 +144,16 @@ function Products() {
   // ------------------------------------
 
   useEffect(() => {
+    try {
+      window.sessionStorage.setItem(
+        PRODUCTS_SEARCH_STORAGE_KEY,
+        search,
+      )
+    } catch {
+      // La búsqueda sigue funcionando aunque
+      // sessionStorage no esté disponible.
+    }
+
     const timeout =
       window.setTimeout(() => {
         setDebouncedSearch(
@@ -521,6 +554,9 @@ function Products() {
                       }
                       brand={
                         product.brand
+                      }
+                      sku={
+                        product.sku
                       }
                       price={
                         product.price
